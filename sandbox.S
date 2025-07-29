@@ -8,23 +8,23 @@
 run_sandbox:
 
 # preset registers to set up environment
-#    li       zero, 0x0000000000000000      # x0 = 0 (hardwired zero)
+    li       zero, 0x0000000000000000      # x0 = 0 (hardwired zero)
 #    li       ra, 0x000000000008b9fc        # x1 = ra
-#    li       sp, 0x0000003fbe31b180       # x2 = t6
+#    li       sp, 0x0000003fbe31b180       # x2 = sp
 #    li       gp, 0x0000003fffe39508       # x3 = gp
 #    li       tp, 0x0000000000000040       # x4 = tp
-#    li       t0, 0x203a32207a7a7566       # x5 = t0
-#    li       t1, 0x0000003fffe39508       # x6 = t1
-#    li       t2, 0x0000000000000001       # x7 = t2
+    li       t0, 0x203a32207a7a7566       # x5 = t0
+    li       t1, 0x0000003fffe39508       # x6 = t1
+    li       t2, 0x0000000000000001       # x7 = t2
 #    li       s0, 0x00000000ffffffff       # x8 = s0/fp
-#    li       s1, 0xffffffffffffffff       # x9 = s1
+    li       s1, 0xffffffffffffffff       # x9 = s1
 #    li       a0, 0x0000003fffa63d00       # x10 = a0
-#    li       a1, 0x0000003fffe39518       # x11 = a1
-#    li       a2, 0x00000000000814d8       # x12 = a2
-#    li       a3, 0x0000002accf8b048      # x13 = a3
-#    li       a4, 0x0000003fffe39400      # x14 = a4
-#    li       a5, 0x00000000000627c8      # x15 = a5
-#    li       a6, 0x000000000004f246      # x16 = a6
+    li       a1, 0x0000003fffe39518       # x11 = a1
+    li       a2, 0x00000000000814d8       # x12 = a2
+    li       a3, 0x0000002accf8b048      # x13 = a3
+    li       a4, 0x0000003fffe39400      # x14 = a4
+    li       a5, 0x00000000000627c8      # x15 = a5
+    li       a6, 0x000000000004f246      # x16 = a6
     li       a7, 0x0000000000000000      # x17 = a7
     li       s2, 0x0000000000000000      # x18 = s2
     li       s3, 0x000000000006cdc0      # x19 = s3
