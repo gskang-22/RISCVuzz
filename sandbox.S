@@ -135,6 +135,7 @@ return_label:
 
 ##############################################################################
 
+
 # Restore registers from regs_before
     la       t6, regs_before
 
@@ -156,19 +157,19 @@ return_label:
     ld       a5, 120(t6)
     ld       a6, 128(t6)
     ld       a7, 136(t6)
-    sd       t4, 232(t6)
-    sd       t5, 240(t6)
+    ld       s2, 144(t6)
+    ld       s3, 152(t6)
+    ld       s4, 160(t6)
+    ld       s5, 168(t6)
+    ld       s6, 176(t6)
+    ld       s7, 184(t6)
+    ld       s8, 192(t6)
+    ld       s9, 200(t6)
+    ld       s10, 208(t6)
+    ld       s11, 216(t6)
+    ld       t3, 224(t6)
+    ld       t4, 232(t6)
+    ld       t5, 240(t6)
+    ld       t6, 248(t6)
 
-    ld       t5, 0(sp)        # Temporarily load old t6 into t5
-    sd       t5, 248(t6)      # Store original t6 (from stack) into offset 248
-
-    addi     sp, sp, 8
-#sd t6, 248(t6)
-
-##############################################################################
-
-# Restore registers from regs_before
-    la       t6, regs_before
-
-    ld       zero, 0(t6)      # x0 - no effect, can skip or do nop
-    ld       ra, 8(t6)
+    ret
