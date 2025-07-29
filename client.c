@@ -138,12 +138,12 @@ void print_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
 
 void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
 {
-
     for (int i = 0; i < 32; i++)
     {
         if (regs_before[i] != regs_after[i])
         {
-            perror("WARNING: differing results. To be discarded");
+            printf("WARNING: Register x%d differs: 0x%016lx -> 0x%016lx\n",
+                   i, regs_before[i], regs_after[i]);
         }
     }
 }

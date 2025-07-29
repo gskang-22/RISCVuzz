@@ -11,6 +11,7 @@ futher expansion.
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 extern void run_sandbox();
 extern sigjmp_buf jump_buffer;
