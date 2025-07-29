@@ -56,10 +56,15 @@ void print_registers(const char *label, uint64_t regs[32])
 
 int main()
 {
+    uint64_t store_regs_before[32];
+    uint64_t store_regs_after[32]
     setup_signal_handlers();
+    unmap_vdso_vvar();
 
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
+	for (size_t i = 0; i < 2; i++) {
+		// loops twice to check for differing results 
         if (sigsetjmp(jump_buffer, 1) == 0)
         {
             sandbox_size = 0x1000;
@@ -80,11 +85,16 @@ int main()
                         print_registers("Registers After", regs_after);
             */
             print_reg_changes(regs_before, regs_after);
+	    memcpy(store_regs_before, regs_before, sizeof(uint32_t));
+	    memcpy(store_regs_after, regs_after, sizeof(uint32_t));
         }
         else
         {
             printf("Recovered from crash\n");
         }
+	}
+	compare_reg_changes(store_regs_before, regs_before);
+	compare_reg_changes(store_regs_after, regs_after);
     }
     return 0;
 }

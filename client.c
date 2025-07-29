@@ -101,6 +101,28 @@ void setup_signal_handlers()
     sigaction(SIGTRAP, &sa, NULL);
 }
 
+void unmap_vdso_vvar() {
+    FILE *maps = fopen("/proc/self/maps", "r");
+    if (!maps) {
+        perror("fopen /proc/self/maps");
+        exit(EXIT_FAILURE);
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), maps)) {
+        if (strstr(line, "[vdso]") || strstr(line, "[vdso_data]") || strstr(line, "[vvar]")) {
+            unsigned long start, end;
+            if (sscanf(line, "%lx-%lx", &start, &end) == 2) {
+                printf("Unmapping %lx - %lx\n", start, end);
+                if (munmap((void *)start, end - start) != 0) {
+                    perror("Warning: unmapping has failed!!");
+                }
+            }
+        }
+    }
+    fclose(maps);
+}
+
 void print_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
 {
 
@@ -113,3 +135,16 @@ void print_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
         }
     }
 }
+
+void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
+{
+
+    for (int i = 0; i < 32; i++)
+    {
+        if (regs_before[i] != regs_after[i])
+        {
+            perror(WARNING: differing results. To be discarded);
+        }
+    }
+}
+
