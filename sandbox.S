@@ -5,11 +5,8 @@
 .extern regs_after 
 .extern sandbox                                                                                 
                                                                                                     
-run_sandbox:                                                                                        
-    #use t0-t6 as temp registers for any copy logic                                                 
-                                                                                                    
-    # Save caller-saved registers (t0-t6, a0-a7) + ra                                               
-   la t6, regs_before                                                                               
+run_sandbox:                                                                        
+    la t6, regs_before                                                                               
                                                                                                     
     sd zero,  0(t6)      # x0 = 0 (hardwired zero)                                                  
     sd ra,    8(t6)      # x1 = ra                                                                  
@@ -44,17 +41,19 @@ run_sandbox:
    sd t5,  240(t6)      # x30 = t5                                                                  
    sd t6,  248(t6)      # x31 = t6                                                                  
                                                                                                     
-                                                                                                    
-########################################################                                            
-                                                                                                    
-#    mv s0, a0                 # Sandbox base addr in s0                                            
+
+                                                                                              
+########################################################                                                                                                                                            
+    la ra, return_label                                    
                                                                                                     
     # Jump absolutely to sandbox start (jalr zero, 0(s0))                                           
-    jal zero, 4(sandbox) # offset 4 to skip the first ebreak                                              
+    jalr zero, 4(a0) # offset 4 to skip the first ebreak
                                                                                                     
 ########################################################                                            
-                                                                                                    
-    # After sandbox returns...                                                                      
+return_label:                                                                                                    
+    # After sandbox returns...    
+    addi sp, sp, -8
+    sd t6, 0(sp)                                                                  
     la t6, regs_after                                                                               
                                                                                                     
     # Save current registers to regs_after                                                          
@@ -89,8 +88,13 @@ run_sandbox:
    sd s11, 216(t6)                                                                                  
    sd t3,  224(t6)                                                                                  
    sd t4,  232(t6)                                                                                  
-   sd t5,  240(t6)                                                                                  
-   sd t6,  248(t6)                                                                                  
+   sd t5,  240(t6)
+
+    ld t5, 0(sp)          # Temporarily load old t6 into t5
+    sd t5, 248(t6)        # Store original t6 (from stack) into offset 248
+
+    addi sp, sp, 8                                                                                  
+    #sd t6,  248(t6)                                                                                  
                                                                                                     
 ##############################################################################                      
                                                                                                     

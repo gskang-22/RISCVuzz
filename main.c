@@ -23,7 +23,7 @@ uint8_t *sandbox;
 uint32_t fuzz_buffer[] = {                                                                          
     // instructions to be injected                                                                  
     0x10028027,                                                                                     
-    0x00008068,                                                                                     
+    0x00008067,                                                                                     
     0x00000013                                                                                      
 };                                                                                                  
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027                                                
@@ -70,13 +70,14 @@ int main() {
             printf("sandbox ptr: %p\n", sandbox);                                                   
             printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);                                
                                                                                                     
-            run_sandbox();                                                                   
+            run_sandbox(sandbox);                                                                   
                                                                                                     
 /*                                                                                                  
             print_registers("Registers Before", regs_before);                                       
             print_registers("Registers After", regs_after);                                         
-            print_reg_changes(regs_before, regs_after);                                             
-*/                                                                                                  
+*/
+	    print_reg_changes(regs_before, regs_after);                                             
+                                                                                                  
                                                                                                     
         } else {                                                                                    
             printf("Recovered from crash\n");                                                       
