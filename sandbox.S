@@ -6,6 +6,42 @@
     .extern  sandbox
 
 run_sandbox:
+
+# preset registers to set up environment
+    li       0x0000000000000000      # x0 = 0 (hardwired zero)
+    li       0x000000000008b9fc        # x1 = ra
+    li       0x0000003fbe31b180       # x2 = t6
+    li       0x0000003fffe39508       # x3 = gp
+    li       0x0000000000000040       # x4 = tp
+    li       0x203a32207a7a7566       # x5 = t0
+    li       0x0000003fffe39508       # x6 = t1
+    li       0x0000000000000001       # x7 = t2
+    li       0x00000000ffffffff       # x8 = s0/fp
+    li       0xffffffffffffffff       # x9 = s1
+    li       0x0000003fffa63d00       # x10 = a0
+    li       0x0000003fffe39518       # x11 = a1
+    li       0x00000000000814d8       # x12 = a2
+    li       0x0000002accf8b048      # x13 = a3
+    li       0x0000003fffe39400      # x14 = a4
+    li       0x00000000000627c8      # x15 = a5
+    li       0x000000000004f246      # x16 = a6
+    li       0x0000000000000000      # x17 = a7
+    li       0x0000000000000000      # x18 = s2
+    li       0x000000000006cdc0      # x19 = s3
+    li       0x000000000008e180      # x20 = s4
+    li       0x000000000006cdc0      # x21 = s5
+    li       0x0000000000084750      # x22 = s6
+    li       0x0000000000086a00      # x23 = s7
+    li       0x0000003fffe39408      # x24 = s8
+    li       0x00000000000814d8      # x25 = s9
+    li       0x000000000004f246     # x26 = s10
+    li       0x0000003fd4687d70     # x27 = s11
+    li       0xffffffffffffffff      # x28 = t3
+    li       0x000000000004ecd4      # x29 = t4
+    li       0x0000000000000001      # x30 = t5
+    li       0x0000003fffe39408      # x31 = t6
+
+########################################################
     la       t6, regs_before
 
     sd       zero, 0(t6)      # x0 = 0 (hardwired zero)
