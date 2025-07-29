@@ -143,7 +143,7 @@ void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
     {
         if (regs_before[i] != regs_after[i])
         {
-            perror(WARNING: differing results. To be discarded);
+            perror("WARNING: differing results. To be discarded");
         }
     }
 }
