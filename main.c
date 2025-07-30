@@ -14,6 +14,7 @@ futher expansion.
 #include <string.h>
 
 extern void run_sandbox();
+extern void test_start();
 extern sigjmp_buf jump_buffer;
 extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
@@ -80,20 +81,21 @@ int main()
                 // inject instruction
                 inject_instructions(sandbox, instrs, sizeof(instrs) / sizeof(uint32_t));
 
-                printf("sandbox ptr: %p\n", sandbox);
-                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
+//                printf("sandbox ptr: %p\n", sandbox);
+//                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
 
-                run_sandbox(sandbox);
+                test_start();
+//		run_sandbox(sandbox);
 
                 /*
                 print_registers("Registers Before", regs_before);
                 print_registers("Registers After", regs_after);
                 */
-                print_reg_changes(regs_before, regs_after);
+//                print_reg_changes(regs_before, regs_after);
                 
 		if (x == 0) {
-		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
-                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
+//		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
+//                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
             	}
 	    }
             else
@@ -101,8 +103,8 @@ int main()
                 printf("Recovered from crash\n");
             }
         }
-        compare_reg_changes(store_regs_before, regs_before);
-        compare_reg_changes(store_regs_after, regs_after);
+//        compare_reg_changes(store_regs_before, regs_before);
+//        compare_reg_changes(store_regs_after, regs_after);
     }
     return 0;
 }

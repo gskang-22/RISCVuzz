@@ -1,5 +1,9 @@
+    .section .text
+    .global test_start
+    .extern regs_before
+    .extern regs_after
+    .extern sandbox
 
-	j test_start	
 
 test_start:
 
@@ -82,15 +86,9 @@ xreg_init:
 
 pseg_0:
 	addi x16, x0, -1502
-	xor x13, x16, x16
 	j reg_dump
 
 reg_dump:
-	la x1, loop_count
-	lw x2, 0(x1)
-	addi x3, x2, -1
-	sw x3, 0(x1)
-	bnez x2, pseg_0
 	la x1, xreg_output_data
 	sd x0, 0(x1)
 	sd x2, 16(x1)
@@ -165,12 +163,12 @@ freg_save:
 	j test_end
 
 crash_forward:
-	RVTEST_FAIL
+#	RVTEST_FAIL
 
 test_end:
-	RVTEST_PASS
+#	RVTEST_PASS
 
-RVTEST_CODE_END
+#RVTEST_CODE_END
 
 
 	.data
@@ -246,7 +244,7 @@ reg_f29_init:	.dword 0xffffffff80000008
 reg_f30_init:	.dword 0xffffffffffff8008
 reg_f31_init:	.dword 0x5ee8301b4d8fc709
 
-RVTEST_DATA_BEGIN
+#RVTEST_DATA_BEGIN
 
 	.align 8
 xreg_output_data:
@@ -387,6 +385,5 @@ test_memory:
 	.dword 0xd3423d6632c08ebc, 0xb3c41ef0489f4e7a
 
 .align 8
-loop_count: .word 0x40
 
-RVTEST_DATA_END
+#RVTEST_DATA_END
