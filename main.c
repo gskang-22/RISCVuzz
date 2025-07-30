@@ -60,7 +60,7 @@ int main()
 {
     uint64_t store_regs_before[32];
     uint64_t store_regs_after[32];
-    
+/*    
     setup_signal_handlers();
     unmap_vdso_vvar();
 
@@ -83,7 +83,7 @@ int main()
 
 //                printf("sandbox ptr: %p\n", sandbox);
 //                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
-
+*/
                 test_start();
 //		run_sandbox(sandbox);
 
@@ -93,7 +93,7 @@ int main()
                 */
 //                print_reg_changes(regs_before, regs_after);
                 
-		if (x == 0) {
+/*		if (x == 0) {
 //		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
 //                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
             	}
@@ -105,6 +105,6 @@ int main()
         }
 //        compare_reg_changes(store_regs_before, regs_before);
 //        compare_reg_changes(store_regs_after, regs_after);
-    }
+    }*/
     return 0;
 }
