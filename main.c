@@ -62,7 +62,6 @@ int main()
 {
     uint64_t store_regs_before[32];
     uint64_t store_regs_after[32];
-
     setup_signal_handlers();
     unmap_vdso_vvar();
 
