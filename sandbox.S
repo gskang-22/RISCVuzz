@@ -1,4 +1,5 @@
     .section .text
+    .section .text.sandbox
     .global  run_sandbox
 
     .extern  regs_before
@@ -8,9 +9,8 @@
 run_sandbox:
 
 # saves important registers to restore at the end 
-    la t6, temp_storage 
-
-#    sd ra, 0(t6)
+    la t6, temp_storage
+    sd ra, 0(t6)
     sd sp, 8(t6)
     sd gp, 16(t6)
     sd tp, 24(t6)
@@ -21,33 +21,48 @@ run_sandbox:
 # preset registers to set up environment
 freg_init:
 freg_s_init:
-    la t6, freg_init_data
+	la t6, freg_init_data
     
-    flw      f2, 16(t6)
-    flw      f3, 24(t6)
-    flw      f4, 32(t6)
-    flw      f5, 40(t6)
-    flw      f6, 48(t6)
-    flw      f7, 56(t6)
-    flw      f8, 64(t6)
-    flw      f10, 80(t6)
-    flw      f13, 104(t6)
-    flw      f14, 112(t6)
-    flw      f15, 120(t6)
-    flw      f16, 128(t6)
-    flw      f17, 136(t6)
-    flw      f20, 160(t6)
-    flw      f22, 176(t6)
-    flw      f25, 200(t6)
-    flw      f29, 232(t6)
-    flw      f30, 240(t6)    
+	flw f2, 16(t6)
+	flw f3, 24(t6)
+	flw f4, 32(t6)
+	flw f5, 40(t6)
+	flw f6, 48(t6)
+	flw f7, 56(t6)
+	flw f8, 64(t6)
+	flw f10, 80(t6)
+	flw f13, 104(t6)
+	flw f14, 112(t6)
+	flw f15, 120(t6)
+	flw f16, 128(t6)
+	flw f17, 136(t6)
+	flw f20, 160(t6)
+	flw f22, 176(t6)
+	flw f25, 200(t6)
+	flw f29, 232(t6)
+	flw f30, 240(t6)
 
 freg_d_init:
+	fld f0, 0(t6)
+	fld f1, 8(t6)
+	fld f9, 72(t6)
+	fld f11, 88(t6)
+	fld f12, 96(t6)
+	fld f18, 144(t6)
+	fld f19, 152(t6)
+	fld f21, 168(t6)
+	fld f23, 184(t6)
+	fld f24, 192(t6)
+	fld f26, 208(t6)
+	fld f27, 216(t6)
+	fld f28, 224(t6)
+	fld f31, 248(t6)
+
 xreg_init:
 	la t6, xreg_init_data
 
 	ld x0, 0(t6)
-#	ld ra, 8(t6)
+	ld ra, 8(t6)
 	ld sp, 16(t6)
 	ld gp, 24(t6)
 	ld tp, 32(t6)
@@ -82,23 +97,14 @@ xreg_init:
 ########################################################
 
     la t6, sandbox_ptr
+    ld t6, 0(t6)
 
 # Jump absolutely to sandbox start (jalr zero, 0(s0))
     jalr     t6, 4(t6)              # offset 4 to skip the first ebreak
 
 ########################################################
+
 return_label:
-# Restore important registers to prevent crash
-    
-    la       t6, temp_storage
-#    ld       ra, 0(t6)
-    ld       sp, 8(t6)
-    ld       gp, 16(t6)
-    ld       tp, 24(t6)
-    ld       fp, 32 (t6)
-
-    ret
-
 # After sandbox returns...
 reg_dump:
 	la t6, xreg_output_data
