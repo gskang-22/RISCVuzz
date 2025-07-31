@@ -20,20 +20,22 @@ extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
 
 size_t sandbox_size;
-uint8_t *sandbox;
+uint8_t *sandbox_ptr;
 
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x10028027,
     0x00008067,
     0x00000013};
+
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00100073, // ebreak
 
     0x00000013, // to be replaced
 
-    0x00008067, // return
+    0x0000F067, // jalr x0, 0(t6)
+    // 0x00008067, // return
     0x00100073, // ebreak
     0x00100073  // ebreak again jic
 };
@@ -60,51 +62,52 @@ int main()
 {
     uint64_t store_regs_before[32];
     uint64_t store_regs_after[32];
-    
+
     setup_signal_handlers();
     unmap_vdso_vvar();
 
     sandbox_size = 0x1000;
-    sandbox = allocate_executable_buffer(sandbox_size);
+    sandbox_ptr = allocate_executable_buffer(sandbox_size);
 
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
         for (size_t x = 0; x < 2; x++)
         {
-	    memset(sandbox, 0, sandbox_size);
+            memset(sandbox_ptr, 0, sandbox_size);
             // loops twice to check for differing results
             if (sigsetjmp(jump_buffer, 1) == 0)
             {
-                               
+
                 // replace nop with fuzzed instruction
                 instrs[1] = fuzz_buffer[i];
                 // inject instruction
-                inject_instructions(sandbox, instrs, sizeof(instrs) / sizeof(uint32_t));
+                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
-//                printf("sandbox ptr: %p\n", sandbox);
-//                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
+                //                printf("sandbox ptr: %p\n", sandbox);
+                //                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
 
                 test_start();
-//		run_sandbox(sandbox);
+                //		run_sandbox(sandbox);
 
                 /*
                 print_registers("Registers Before", regs_before);
                 print_registers("Registers After", regs_after);
                 */
-//                print_reg_changes(regs_before, regs_after);
-                
-		if (x == 0) {
-//		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
-//                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
-            	}
-	    }
+                //                print_reg_changes(regs_before, regs_after);
+
+                if (x == 0)
+                {
+                    //		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
+                    //                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
+                }
+            }
             else
             {
                 printf("Recovered from crash\n");
             }
         }
-//        compare_reg_changes(store_regs_before, regs_before);
-//        compare_reg_changes(store_regs_after, regs_after);
+        //        compare_reg_changes(store_regs_before, regs_before);
+        //        compare_reg_changes(store_regs_after, regs_after);
     }
     return 0;
 }
