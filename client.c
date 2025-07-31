@@ -10,7 +10,6 @@
 #include <ucontext.h>
 
 extern size_t sandbox_size;
-extern uint8_t *sandbox;
 extern const char *reg_names[32];
 
 sigjmp_buf jump_buffer;

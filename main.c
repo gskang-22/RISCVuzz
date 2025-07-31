@@ -24,18 +24,19 @@ uint8_t *sandbox_ptr;
 
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
+    0x00000013,
     0x10028027,
     0x00008067,
-    0x00000013};
+    };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00100073, // ebreak
 
     0x00000013, // to be replaced
-
-    0x0000F067, // jalr x0, 0(t6)
-    // 0x00008067, // return
+    //0xFFFF8F67,
+    // 0x0000F067, // jalr x0, 0(t6)
+     0x00008067, // return
     0x00100073, // ebreak
     0x00100073  // ebreak again jic
 };
@@ -71,7 +72,7 @@ int main()
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
         for (size_t x = 0; x < 2; x++)
-        {
+        {}
             memset(sandbox_ptr, 0, sandbox_size);
             // loops twice to check for differing results
             if (sigsetjmp(jump_buffer, 1) == 0)
@@ -82,19 +83,17 @@ int main()
                 // inject instruction
                 inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
-                //                printf("sandbox ptr: %p\n", sandbox);
-                //                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
+                printf("sandbox ptr: %p\n", sandbox_ptr);
+                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
 
-                test_start();
-                //		run_sandbox(sandbox);
-
+                run_sandbox(sandbox_ptr);
                 /*
                 print_registers("Registers Before", regs_before);
                 print_registers("Registers After", regs_after);
                 */
                 //                print_reg_changes(regs_before, regs_after);
 
-                if (x == 0)
+                
                 {
                     //		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
                     //                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
@@ -104,7 +103,7 @@ int main()
             {
                 printf("Recovered from crash\n");
             }
-        }
+        
         //        compare_reg_changes(store_regs_before, regs_before);
         //        compare_reg_changes(store_regs_after, regs_after);
     }
