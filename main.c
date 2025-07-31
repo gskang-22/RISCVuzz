@@ -91,12 +91,12 @@ int main()
                 print_registers("Registers Before", regs_before);
                 print_registers("Registers After", regs_after);
                 */
-                //                print_reg_changes(regs_before, regs_after);
+                // print_reg_changes(regs_before, regs_after);
 
                 
                 {
-                    //		    memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
-                    //                    memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
+                    // memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
+                    // memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
                 }
             }
             else
