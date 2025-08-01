@@ -38,18 +38,26 @@ uint8_t *allocate_executable_buffer(size_t size)
 {
     void *buf = mmap(NULL, size,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
-                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+                     MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
+
     if (buf == MAP_FAILED)
     {
         perror("mmap");
         exit(EXIT_FAILURE);
     }
+
+    // Fill page with ebreak padding (0x00100073)
+    for (size_t i = 0; i < size / 4; i++)
+    {
+        ((uint32_t *)buf)[i] = 0x00100073;
+    }
+
     return (uint8_t *)buf;
 }
 
-void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t num_instrs)
+void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t start_offset)
 {
-    memcpy(buf, instrs, num_instrs * sizeof(uint32_t));
+    memcpy(buf + start_offset, instrs, sizeof(instrs));
 }
 
 // Signal handler for SIGILL and SIGSEGV
@@ -100,20 +108,26 @@ void setup_signal_handlers()
     sigaction(SIGTRAP, &sa, NULL);
 }
 
-void unmap_vdso_vvar() {
+void unmap_vdso_vvar()
+{
     FILE *maps = fopen("/proc/self/maps", "r");
-    if (!maps) {
+    if (!maps)
+    {
         perror("fopen /proc/self/maps");
         exit(EXIT_FAILURE);
     }
 
     char line[256];
-    while (fgets(line, sizeof(line), maps)) {
-        if (strstr(line, "[vdso]") || strstr(line, "[vdso_data]") || strstr(line, "[vvar]")) {
+    while (fgets(line, sizeof(line), maps))
+    {
+        if (strstr(line, "[vdso]") || strstr(line, "[vdso_data]") || strstr(line, "[vvar]"))
+        {
             unsigned long start, end;
-            if (sscanf(line, "%lx-%lx", &start, &end) == 2) {
+            if (sscanf(line, "%lx-%lx", &start, &end) == 2)
+            {
                 printf("Unmapping %lx - %lx\n", start, end);
-                if (munmap((void *)start, end - start) != 0) {
+                if (munmap((void *)start, end - start) != 0)
+                {
                     perror("Warning: unmapping has failed!!");
                 }
             }
@@ -146,4 +160,3 @@ void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
         }
     }
 }
-
