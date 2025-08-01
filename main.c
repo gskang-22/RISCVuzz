@@ -26,8 +26,8 @@ size_t start_offset = 0x20;
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x00000013, // nop
-//    0x10028027, // ghostwrite
-//    0x00008067, // ret
+    0x10028027, // ghostwrite
+    0x00008067, // ret
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
@@ -61,11 +61,16 @@ int main()
     uint64_t store_regs_after[32];
     setup_signal_handlers();
     unmap_vdso_vvar();
+    printf("\n");
 
     sandbox_ptr = allocate_executable_buffer(sandbox_size);
+    printf("sandbox ptr: %p\n", sandbox_ptr);
 
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
+
+	printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+
         // loops twice to check for differing results
         for (size_t x = 0; x < 2; x++)
         {
@@ -79,9 +84,6 @@ int main()
 
                 // inject instruction
                 inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
-
-                printf("sandbox ptr: %p\n", sandbox_ptr);
-                printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
 
                 run_sandbox(sandbox_ptr);
                 /*
@@ -103,6 +105,7 @@ int main()
             //        compare_reg_changes(store_regs_before, regs_before);
             //        compare_reg_changes(store_regs_after, regs_after);
         }
+	printf("\n");
     }
     return 0;
 }
