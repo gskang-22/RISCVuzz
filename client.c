@@ -46,17 +46,17 @@ uint8_t *allocate_executable_buffer(size_t size)
         exit(EXIT_FAILURE);
     }
 
+    return (uint8_t *)buf;
+}
+
+void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t start_offset, size_t size)
+{
     // Fill page with ebreak padding (0x00100073)
     for (size_t i = 0; i < size / 4; i++)
     {
         ((uint32_t *)buf)[i] = 0x00100073;
     }
 
-    return (uint8_t *)buf;
-}
-
-void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t start_offset)
-{
     memcpy(buf + start_offset, instrs, sizeof(instrs));
 }
 

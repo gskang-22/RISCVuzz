@@ -63,9 +63,9 @@ xreg_init:
 
 	ld x0, 0(t6)
 	ld ra, 8(t6)
-	ld sp, 16(t6)
-	ld gp, 24(t6)
-	ld tp, 32(t6)
+#	ld sp, 16(t6)
+#	ld gp, 24(t6)
+#	ld tp, 32(t6)
 	ld t0, 40(t6)
 	ld t1, 48(t6)
 	ld t2, 56(t6)
@@ -104,6 +104,15 @@ xreg_init:
 
 ########################################################
 
+# Restore important registers to prevent crash 
+    la t6, temp_storage
+    ld ra, 0(t6)
+    ld sp, 8(t6)
+    ld gp, 16(t6)
+    ld tp, 24(t6)
+    ld fp, 32 (t6)
+
+    ret
 return_label:
 # After sandbox returns...
 reg_dump:
