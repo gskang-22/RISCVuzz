@@ -35,8 +35,8 @@ uint32_t instrs[] = {
 
     0x00000013, // to be replaced
     //0xFFFF8F67,
-    // 0x0000F067, // jalr x0, 0(t6)
-     0x00008067, // return
+     0x0000F067, // jalr x0, 0(t6)
+    // 0x00008067, // return
     0x00100073, // ebreak
     0x00100073  // ebreak again jic
 };
