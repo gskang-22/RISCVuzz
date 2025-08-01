@@ -38,7 +38,7 @@ uint8_t *allocate_executable_buffer(size_t size)
 {
     void *buf = mmap(NULL, size,
                      PROT_READ | PROT_WRITE | PROT_EXEC,
-                     MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
+                     MAP_ANONYMOUS | MAP_PRIVATE , -1, 0);
 
     if (buf == MAP_FAILED)
     {
@@ -49,7 +49,7 @@ uint8_t *allocate_executable_buffer(size_t size)
     return (uint8_t *)buf;
 }
 
-void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t start_offset, size_t size)
+void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t num_instrs, size_t start_offset, size_t size)
 {
     // Fill page with ebreak padding (0x00100073)
     for (size_t i = 0; i < size / 4; i++)
@@ -57,7 +57,7 @@ void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t start_offs
         ((uint32_t *)buf)[i] = 0x00100073;
     }
 
-    memcpy(buf + start_offset, instrs, sizeof(instrs));
+    memcpy(buf + start_offset, instrs, num_instrs * sizeof(uint32_t));
 }
 
 // Signal handler for SIGILL and SIGSEGV
@@ -70,6 +70,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     {
     case SIGILL:
         printf("Caught SIGILL (Illegal Instruction)\n");
+	printf("Faulting address: %p\n", info->si_addr);
         break;
     case SIGSEGV:
         printf("Caught SIGSEGV (Segmentation Fault)\n");

@@ -66,12 +66,12 @@ xreg_init:
 #	ld sp, 16(t6)
 #	ld gp, 24(t6)
 #	ld tp, 32(t6)
-	ld t0, 40(t6)
+#	ld t0, 40(t6)
 	ld t1, 48(t6)
 	ld t2, 56(t6)
-	ld s0, 64(t6)
+#	ld s0, 64(t6)
 	ld s1, 72(t6)
-	ld a0, 80(t6)
+#	ld a0, 80(t6)
 	ld a1, 88(t6)
 	ld a2, 96(t6)
 	ld a3, 104(t6)
@@ -100,7 +100,7 @@ xreg_init:
     ld t6, 0(t6)
 
 # Jump absolutely to sandbox start (jalr zero, 0(s0))
-    jalr     t6, 4(t6)              # offset 4 to skip the first ebreak
+    jalr     t6, 0x20(t6)              # offset 4 to skip the first ebreak
 
 ########################################################
 

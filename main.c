@@ -25,27 +25,16 @@ size_t start_offset = 0x20;
 
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
-    0x00000013,
-    0x10028027,
-    0x00008067,
+    0x00000013, // nop
+//    0x10028027, // ghostwrite
+//    0x00008067, // ret
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
-    0x00100073, // ebreak
-
-    0x00000013, // to be replaced
-<<<<<<< HEAD
-                // 0xFFFF8F67,
-    //  0x0000F067, // jalr x0, 0(t6)
-    0x00008067, // return
-=======
+    0x00000013, // nop to be replaced
     //0xFFFF8F67,
-     0x0000F067, // jalr x0, 0(t6)
-    // 0x00008067, // return
->>>>>>> 0e7992df8ff4c67b892257cc18cb0039c8c25d3c
-    0x00100073, // ebreak
-    0x00100073  // ebreak again jic
+    0x000F8067, // jalr x0, 0(t6)
 };
 
 const char *reg_names[] = {
@@ -86,10 +75,10 @@ int main()
             if (sigsetjmp(jump_buffer, 1) == 0)
             {
                 // replace nop with fuzzed instruction
-                instrs[1] = fuzz_buffer[i];
+                instrs[0] = fuzz_buffer[i];
 
                 // inject instruction
-                inject_instructions(sandbox_ptr, instrs, start_offset, sandbox_size);
+                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
 
                 printf("sandbox ptr: %p\n", sandbox_ptr);
                 printf("Running fuzz %zu: 0x%08x\n", i, fuzz_buffer[i]);
