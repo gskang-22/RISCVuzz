@@ -12,6 +12,8 @@ futher expansion.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 extern void run_sandbox();
 extern void test_start();
@@ -28,6 +30,7 @@ uint32_t fuzz_buffer[] = {
     0x00000013, // nop
     0x10028027, // ghostwrite
     0x00008067, // ret
+    0xFFFFFFFF,	// illegal instruction
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027

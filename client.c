@@ -1,5 +1,6 @@
 #include "client.h"
 
+
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
@@ -11,6 +12,8 @@
 
 extern size_t sandbox_size;
 extern const char *reg_names[32];
+extern uint64_t temp_storage[];
+extern uint64_t xreg_output_data[];
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
@@ -66,6 +69,18 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     ucontext_t *uc = (ucontext_t *)context;
     saved_context = *uc; // Save the context for inspection after jump
 
+    // storing values into general registers
+    for (int i = 0; i < 32; i++) {
+        xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
+    }
+
+    // For example, restore safe values from your saved_regs table:
+    extern uint64_t saved_regs[];
+    uc->uc_mcontext.__gregs[1] = temp_storage[1];  // ra
+    uc->uc_mcontext.__gregs[2] = temp_storage[2];  // sp
+    uc->uc_mcontext.__gregs[3] = temp_storage[3];  // gp
+    uc->uc_mcontext.__gregs[4] = temp_storage[4];  // tp
+
     switch (signo)
     {
     case SIGILL:
@@ -84,11 +99,11 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         break;
     case SIGTRAP:
         printf("Caught SIGTRAP: EBREAK\n");
-        uc->uc_mcontext.__gregs[REG_PC] += 4; // advance PC by 4 bytes
         return;
     default:
         printf("Caught signal %d\n", signo);
     }
+    uc->uc_mcontext.__gregs[REG_PC] += 4; // advance PC by 4 bytes
     siglongjmp(jump_buffer, 1);
 }
 
