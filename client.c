@@ -108,7 +108,6 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     default:
         printf("Caught signal %d\n", signo);
     }
-    // uc->uc_mcontext.__gregs[REG_PC] += 4; // advance PC by 4 bytes
     siglongjmp(jump_buffer, 1);
 }
 
