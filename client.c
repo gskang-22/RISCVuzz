@@ -1,6 +1,5 @@
 #include "client.h"
 
-
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
@@ -42,7 +41,7 @@ uint8_t *allocate_executable_buffer(size_t size)
     size_t total_size = 5 * size; // 2 Guard + 1 sandbox + 2 Guard pages
     void *buf = mmap(NULL, total_size,
                      PROT_NONE,
-                     MAP_ANONYMOUS | MAP_PRIVATE , -1, 0);
+                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 
     if (buf == MAP_FAILED)
     {
@@ -51,7 +50,8 @@ uint8_t *allocate_executable_buffer(size_t size)
     }
 
     uint8_t *sandbox = buf + 2 * size;
-    if (mprotect(sandbox, size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+    if (mprotect(sandbox, size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
+    {
         perror("mprotect");
         exit(1);
     }
@@ -68,7 +68,7 @@ void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t num_instrs
     }
 
     memcpy(buf + start_offset, instrs, num_instrs * sizeof(uint32_t));
-        asm volatile ("fence.i" ::: "memory");
+    asm volatile("fence.i" ::: "memory");
 }
 
 // Signal handler for SIGILL and SIGSEGV
@@ -78,7 +78,8 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     saved_context = *uc; // Save the context for inspection after jump
 
     // storing values into general registers
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 32; i++)
+    {
         xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
     }
     // printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
@@ -90,7 +91,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     {
     case SIGILL:
         printf("Caught SIGILL (Illegal Instruction)\n");
-	printf("Faulting address: %p\n", info->si_addr);
+        printf("Faulting address: %p\n", info->si_addr);
         break;
     case SIGSEGV:
         printf("Caught SIGSEGV (Segmentation Fault)\n");

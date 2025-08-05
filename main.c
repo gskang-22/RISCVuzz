@@ -23,7 +23,7 @@ extern sigjmp_buf jump_buffer;
 extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
 
-static char alt_stack[SIGSTKSZ];  // Signal alternate stack
+static char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
 size_t sandbox_size = 0x1000;
 uint8_t *sandbox_ptr;
@@ -33,15 +33,15 @@ uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x00000013, // nop
     0x10028027, // ghostwrite
-    0xFFFFFFFF,	// illegal instruction
+    0xFFFFFFFF, // illegal instruction
     0x00008067, // ret
-    0xFFFFFFFF,	// illegal instruction
+    0xFFFFFFFF, // illegal instruction
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00000013, // nop to be replaced
-    
+
     0x000F8067, // jalr x0, 0(t6)
 };
 
@@ -81,6 +81,39 @@ int main()
 
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
+        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+
+        // loops twice to check for differing results
+        for (size_t x = 0; x < 2; x++)
+        {
+            // clears sandbox memory
+            memset(sandbox_ptr, 0, sandbox_size);
+
+            if (sigsetjmp(jump_buffer, 1) == 0)
+            {
+                // replace nop with fuzzed instruction
+                instrs[0] = fuzz_buffer[i];
+
+                // inject instruction
+                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
+
+                run_sandbox(sandbox_ptr);
+
+                // print_registers("Registers Before", regs_before);
+                // print_registers("Registers After", regs_after);
+
+                // print_reg_changes(regs_before, regs_after);
+            }
+            else
+            {
+                printf("Recovered from crash\n");
+            }
+        }
+        printf("\n");
+    }
+    return 0;
+}
+
 /*
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
         memset(sandbox_ptr, 0, sandbox_size);
@@ -104,37 +137,3 @@ int main()
                 printf("Child exited %d\n", WEXITSTATUS(status));
         }
 */
-        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
-
-        // loops twice to check for differing results
-        for (size_t x = 0; x < 2; x++)
-        {
-            // clears sandbox memory
-            memset(sandbox_ptr, 0, sandbox_size);
-
-            if (sigsetjmp(jump_buffer, 1) == 0)
-            {
-                // replace nop with fuzzed instruction
-                instrs[0] = fuzz_buffer[i];
-
-                // inject instruction
-                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
-		
-
-                run_sandbox(sandbox_ptr);
-                
-                // print_registers("Registers Before", regs_before);
-                // print_registers("Registers After", regs_after);
-                
-                // print_reg_changes(regs_before, regs_after);
-            }
-            else
-            {
-                printf("Recovered from crash\n");
-            }
-        }
-        printf("\n");
-        
-    }
-    return 0;
-}
