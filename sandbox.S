@@ -68,11 +68,11 @@ xreg_init:
 	la t6, xreg_init_data
 
 	ld x0, 0(t6)
-#	ld ra, 8(t6)
-#	ld sp, 16(t6)
+	ld ra, 8(t6)
+	ld sp, 16(t6)
 #	ld gp, 24(t6)
 #	ld tp, 32(t6)
-	ld t0, 40(t6)
+#	ld t0, 40(t6)
 	ld t1, 48(t6)
 	ld t2, 56(t6)
 	ld s0, 64(t6)
@@ -98,7 +98,7 @@ xreg_init:
 	ld t3, 224(t6)
 	ld t4, 232(t6)
 	ld t5, 240(t6)
-	# ld t6, 248(t6)
+	ld t6, 248(t6)
 
 ########################################################
     

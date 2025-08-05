@@ -33,6 +33,7 @@ uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x00000013, // nop
     0x10028027, // ghostwrite
+    0xFFFFFFFF,	// illegal instruction
     0x00008067, // ret
     0xFFFFFFFF,	// illegal instruction
 };
@@ -103,7 +104,6 @@ int main()
                 printf("Child exited %d\n", WEXITSTATUS(status));
         }
 */
-        
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
         // loops twice to check for differing results

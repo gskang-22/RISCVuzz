@@ -39,17 +39,24 @@ Things to consider:
 // required for dynamic code injection
 uint8_t *allocate_executable_buffer(size_t size)
 {
-    void *buf = mmap(NULL, size,
-                     PROT_READ | PROT_WRITE | PROT_EXEC,
+    size_t total_size = 5 * size; // 2 Guard + 1 sandbox + 2 Guard pages
+    void *buf = mmap(NULL, total_size,
+                     PROT_NONE,
                      MAP_ANONYMOUS | MAP_PRIVATE , -1, 0);
 
     if (buf == MAP_FAILED)
     {
         perror("mmap");
-        exit(EXIT_FAILURE);
+        exit(1);
     }
 
-    return (uint8_t *)buf;
+    uint8_t *sandbox = buf + 2 * size;
+    if (mprotect(sandbox, size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+        perror("mprotect");
+        exit(1);
+    }
+
+    return sandbox;
 }
 
 void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t num_instrs, size_t start_offset, size_t size)
@@ -61,6 +68,7 @@ void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t num_instrs
     }
 
     memcpy(buf + start_offset, instrs, num_instrs * sizeof(uint32_t));
+        asm volatile ("fence.i" ::: "memory");
 }
 
 // Signal handler for SIGILL and SIGSEGV
@@ -73,21 +81,11 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     for (int i = 0; i < 32; i++) {
         xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
     }
-    printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
-    printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
-    printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
-    printf("fp: %ld\n", uc->uc_mcontext.__gregs[4]);
-    // For example, restore safe values from your saved_regs table:
-    extern uint64_t saved_regs[];
-    uc->uc_mcontext.__gregs[1] = temp_storage[0];  // ra
-    uc->uc_mcontext.__gregs[2] = temp_storage[1];  // sp
-    uc->uc_mcontext.__gregs[3] = temp_storage[2];  // gp
-    uc->uc_mcontext.__gregs[4] = temp_storage[3];  // tp
-    uc->uc_mcontext.__gregs[8] = temp_storage[4];  // fp/x8
-    printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
-    printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
-    printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
-    printf("fp: %ld\n", uc->uc_mcontext.__gregs[4]);
+    // printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
+    // printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
+    // printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
+    // printf("fp: %ld\n", uc->uc_mcontext.__gregs[4]);
+
     switch (signo)
     {
     case SIGILL:
