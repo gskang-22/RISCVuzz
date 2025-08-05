@@ -73,14 +73,21 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     for (int i = 0; i < 32; i++) {
         xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
     }
-
+    printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
+    printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
+    printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
+    printf("fp: %ld\n", uc->uc_mcontext.__gregs[4]);
     // For example, restore safe values from your saved_regs table:
     extern uint64_t saved_regs[];
-    uc->uc_mcontext.__gregs[1] = temp_storage[1];  // ra
-    uc->uc_mcontext.__gregs[2] = temp_storage[2];  // sp
-    uc->uc_mcontext.__gregs[3] = temp_storage[3];  // gp
-    uc->uc_mcontext.__gregs[4] = temp_storage[4];  // tp
-
+    uc->uc_mcontext.__gregs[1] = temp_storage[0];  // ra
+    uc->uc_mcontext.__gregs[2] = temp_storage[1];  // sp
+    uc->uc_mcontext.__gregs[3] = temp_storage[2];  // gp
+    uc->uc_mcontext.__gregs[4] = temp_storage[3];  // tp
+    uc->uc_mcontext.__gregs[8] = temp_storage[4];  // fp/x8
+    printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
+    printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
+    printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
+    printf("fp: %ld\n", uc->uc_mcontext.__gregs[4]);
     switch (signo)
     {
     case SIGILL:
@@ -99,11 +106,11 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         break;
     case SIGTRAP:
         printf("Caught SIGTRAP: EBREAK\n");
-        return;
+        break;
     default:
         printf("Caught signal %d\n", signo);
     }
-    uc->uc_mcontext.__gregs[REG_PC] += 4; // advance PC by 4 bytes
+    // uc->uc_mcontext.__gregs[REG_PC] += 4; // advance PC by 4 bytes
     siglongjmp(jump_buffer, 1);
 }
 
@@ -115,8 +122,7 @@ void setup_signal_handlers()
     memset(&sa, 0, sizeof(sa));
     sa.sa_sigaction = signal_handler;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_SIGINFO | SA_RESTART;
-
+    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sigaction(SIGILL, &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGBUS, &sa, NULL);

@@ -1,6 +1,12 @@
-    .section .text
-    .section .text.sandbox
-    .global  run_sandbox
+
+    .text
+    .global run_sandbox
+    .global temp_storage
+    .global xreg_init_data
+    .global freg_init_data
+    .global xreg_output_data
+    .global freg_output_data
+    .global test_memory
 
     .extern  regs_before
     .extern  regs_after
@@ -71,7 +77,7 @@ xreg_init:
 	ld t2, 56(t6)
 	ld s0, 64(t6)
 	ld s1, 72(t6)
-	ld a0, 80(t6)	// x8:: s0/fp
+#	ld a0, 80(t6)	// x8:: s0/fp
 	ld a1, 88(t6)
 	ld a2, 96(t6)
 	ld a3, 104(t6)
@@ -100,7 +106,7 @@ xreg_init:
     ld t6, 0(t6)
 
 # Jump absolutely to sandbox start (jalr zero, 0(s0))
-    jalr     t6, 0x20(t6)              # offset 4 to skip the first ebreak
+    jalr     t6, 32(t6)              # offset 4 to skip the first ebreak
 
 ########################################################
 

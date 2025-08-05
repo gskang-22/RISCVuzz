@@ -14,12 +14,16 @@ futher expansion.
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdlib.h>
+#include <sys/mman.h>
 
 extern void run_sandbox();
 extern void test_start();
 extern sigjmp_buf jump_buffer;
 extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
+
+static char alt_stack[SIGSTKSZ];  // Signal alternate stack
 
 size_t sandbox_size = 0x1000;
 uint8_t *sandbox_ptr;
@@ -36,7 +40,7 @@ uint32_t fuzz_buffer[] = {
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00000013, // nop to be replaced
-    // 0xFFFF8F67,
+    
     0x000F8067, // jalr x0, 0(t6)
 };
 
@@ -68,9 +72,15 @@ int main()
     sandbox_ptr = allocate_executable_buffer(sandbox_size);
     printf("sandbox ptr: %p\n", sandbox_ptr);
 
+    stack_t ss;
+    ss.ss_sp = alt_stack;
+    ss.ss_size = sizeof(alt_stack);
+    ss.ss_flags = 0;
+    sigaltstack(&ss, NULL);
+
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
-
+/*
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
         memset(sandbox_ptr, 0, sandbox_size);
         pid_t pid = fork();
@@ -92,8 +102,8 @@ int main()
             else
                 printf("Child exited %d\n", WEXITSTATUS(status));
         }
-
-        /*
+*/
+        
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
         // loops twice to check for differing results
@@ -109,29 +119,22 @@ int main()
 
                 // inject instruction
                 inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
+		
 
                 run_sandbox(sandbox_ptr);
                 
-                print_registers("Registers Before", regs_before);
-                print_registers("Registers After", regs_after);
+                // print_registers("Registers Before", regs_before);
+                // print_registers("Registers After", regs_after);
                 
                 // print_reg_changes(regs_before, regs_after);
-
-                
-                // memcpy(store_regs_before, regs_before, 32 * sizeof(uint64_t));
-                // memcpy(store_regs_after, regs_after, 32 * sizeof(uint64_t));
-                
             }
             else
             {
                 printf("Recovered from crash\n");
             }
-
-            // compare_reg_changes(store_regs_before, regs_before);
-            // compare_reg_changes(store_regs_after, regs_after);
         }
         printf("\n");
-        */
+        
     }
     return 0;
 }
