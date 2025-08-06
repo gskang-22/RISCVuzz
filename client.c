@@ -13,8 +13,10 @@ extern size_t sandbox_size;
 extern const char *reg_names[32];
 extern uint64_t temp_storage[];
 extern uint64_t xreg_output_data[];
-extern void signal_trampoline(); // from assembly
+extern uint64_t freg_output_data[];
 extern size_t start_offset;
+extern void signal_trampoline(); // from assembly
+uint64_t fcsr_output_data;
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
@@ -65,7 +67,7 @@ uint8_t *allocate_executable_buffer()
 void prepare_sandbox(uint8_t *sandbox_ptr)
 {
     // Reset sandbox to PROT_NONE after each run
-    if (mprotect(sandbox_ptr, sandbox_size, PROT_NONE) != 0)
+    if (mprotect(sandbox_ptr, page_size * sandbox_pages, PROT_NONE) != 0)
     {
         perror("mprotect NONE");
         exit(1);
@@ -81,10 +83,8 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t nu
         exit(1);
     }
     // Fill sandbox with ebreak (0x00100073)
-    size_t num_words = sandbox_size / sizeof(uint32_t);
-    for (size_t i = 0; i < num_words; i++)
-    {
-        sandbox_ptr[i] = 0x00100073;
+    for (size_t i = 0; i < sandbox_pages * page_size; i += 4) {
+        *(uint32_t *)(sandbox_ptr + i) = 0x00100073;
     }
 
     // copy fuzzed instructions
@@ -94,7 +94,7 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t nu
     asm volatile("fence.i" ::: "memory");
 
     // make page executable
-    if (mprotect(sandbox_ptr, sandbox_size, PROT_READ | PROT_EXEC) != 0)
+    if (mprotect(sandbox_ptr, sandbox_pages * page_size, PROT_READ | PROT_EXEC) != 0)
     {
         perror("mprotect RX");
         exit(1);
@@ -107,11 +107,26 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     ucontext_t *uc = (ucontext_t *)context;
     saved_context = *uc; // Save the context for inspection after jump
 
-    // storing values into general registers
+    // === Save general-purpose registers (x0-x31) ===
     for (int i = 0; i < 32; i++)
     {
         xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
     }
+    
+    // === Save floating-point registers if available ===
+    union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
+    // Check if FP state is valid (might need a different check than NULL)
+    if (uc->uc_mcontext.__fpregs.__d.__f[0] != 0) {  // or some other appropriate check
+        for (int i = 0; i < 32; i++) {
+            freg_output_data[i] = fpstate->__d.__f[i];
+        }
+
+        fcsr_output_data = fpstate->__d.__fcsr;
+    } else {
+        memset(freg_output_data, 0, sizeof(uint64_t) * 32);
+        fcsr_output_data = 0;
+    }
+    
     // printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
     // printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
     // printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
