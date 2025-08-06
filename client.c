@@ -14,12 +14,17 @@ extern const char *reg_names[32];
 extern uint64_t temp_storage[];
 extern uint64_t xreg_output_data[];
 extern void signal_trampoline(); // from assembly
+extern size_t start_offset;
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
 uint64_t regs_before[32];
 uint64_t regs_after[32];
 static char alt_stack[SIGSTKSZ]; // Signal alternate stack
+
+size_t page_size = 4096;
+size_t sandbox_pages = 1;      // 4 KB sandbox
+size_t guard_pages = 16;       // 64 KB guards (tunable)
 
 /*
 Code for client (RISC-V board)
@@ -38,9 +43,11 @@ Things to consider:
 
 // allocates a memory buffer to write to and execute
 // required for dynamic code injection
-uint8_t *allocate_executable_buffer(size_t size)
+uint8_t *allocate_executable_buffer()
 {
-    size_t total_size = 5 * size; // 2 Guard + 1 sandbox + 2 Guard pages
+    size_t total_pages = sandbox_pages + 2 * guard_pages;
+    size_t total_size = total_pages * page_size;
+
     void *buf = mmap(NULL, total_size,
                      PROT_NONE,
                      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -51,8 +58,8 @@ uint8_t *allocate_executable_buffer(size_t size)
         exit(1);
     }
 
-    uint8_t *sandbox = buf + 2 * size;
-    if (mprotect(sandbox, size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
+    uint8_t *sandbox = buf + guard_pages * page_size;
+    if (mprotect(sandbox, sandbox_pages * page_size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
     {
         perror("mprotect");
         exit(1);
@@ -61,15 +68,12 @@ uint8_t *allocate_executable_buffer(size_t size)
     return sandbox;
 }
 
-void inject_instructions(uint8_t *buf, const uint32_t *instrs, size_t num_instrs, size_t start_offset, size_t size)
+void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t num_instrs)
 {
-    // Fill page with ebreak padding (0x00100073)
-    for (size_t i = 0; i < size / 4; i++)
-    {
-        ((uint32_t *)buf)[i] = 0x00100073;
-    }
+    // Fill sandbox with ebreak paddings (0x00100073)
+    memset(sandbox_ptr, 0x73, sandbox_pages * page_size);
 
-    memcpy(buf + start_offset, instrs, num_instrs * sizeof(uint32_t));
+    memcpy(sandbox_ptr + start_offset, instrs, num_instrs * sizeof(uint32_t));
     asm volatile("fence.i" ::: "memory");
 }
 
@@ -124,13 +128,10 @@ void setup_signal_handlers()
     ss.ss_flags = 0;
     sigaltstack(&ss, NULL);
 
-    
     struct sigaction sa;
-
     memset(&sa, 0, sizeof(sa));
     sa.sa_sigaction = (void*)signal_trampoline;
     sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
-    // sa.sa_sigaction = signal_handler;
 
     sigemptyset(&sa.sa_mask);
     sigaction(SIGILL, &sa, NULL);

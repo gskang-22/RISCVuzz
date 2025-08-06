@@ -23,10 +23,11 @@ extern sigjmp_buf jump_buffer;
 extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
 
-size_t sandbox_size = 0x1000;
+extern size_t sandbox_pages;
+extern size_t page_size;
+
 uint8_t *sandbox_ptr;
 size_t start_offset = 0x20;
-
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x00000013, // nop
@@ -68,7 +69,7 @@ int main()
     setup_signal_handlers();
     unmap_vdso_vvar();
     printf("\n");
-    sandbox_ptr = allocate_executable_buffer(sandbox_size);
+    sandbox_ptr = allocate_executable_buffer();
     printf("sandbox ptr: %p\n", sandbox_ptr);
 
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
@@ -79,7 +80,7 @@ int main()
         for (size_t x = 0; x < 2; x++)
         {
             // clears sandbox memory
-            memset(sandbox_ptr, 0, sandbox_size);
+            memset(sandbox_ptr, 0, page_size * sandbox_pages);
 
             if (sigsetjmp(jump_buffer, 1) == 0)
             {
@@ -87,7 +88,7 @@ int main()
                 instrs[0] = fuzz_buffer[i];
 
                 // inject instruction
-                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
+                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
                 run_sandbox(sandbox_ptr);
 
