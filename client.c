@@ -13,11 +13,13 @@ extern size_t sandbox_size;
 extern const char *reg_names[32];
 extern uint64_t temp_storage[];
 extern uint64_t xreg_output_data[];
+extern void signal_trampoline(); // from assembly
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
 uint64_t regs_before[32];
 uint64_t regs_after[32];
+static char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
 /*
 Code for client (RISC-V board)
@@ -115,12 +117,22 @@ void signal_handler(int signo, siginfo_t *info, void *context)
 // Setup signal handlers
 void setup_signal_handlers()
 {
+    // install alt stack (to allow clobbering of sp)
+    stack_t ss;
+    ss.ss_sp = alt_stack;
+    ss.ss_size = sizeof(alt_stack);
+    ss.ss_flags = 0;
+    sigaltstack(&ss, NULL);
+
+    
     struct sigaction sa;
 
     memset(&sa, 0, sizeof(sa));
-    sa.sa_sigaction = signal_handler;
-    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = (void*)signal_trampoline;
     sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    // sa.sa_sigaction = signal_handler;
+
+    sigemptyset(&sa.sa_mask);
     sigaction(SIGILL, &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGBUS, &sa, NULL);
