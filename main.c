@@ -64,11 +64,8 @@ void print_registers(const char *label, uint64_t regs[32])
 
 int main()
 {
-    uint64_t store_regs_before[32];
-    uint64_t store_regs_after[32];
     setup_signal_handlers();
     unmap_vdso_vvar();
-    printf("\n");
     sandbox_ptr = allocate_executable_buffer();
     printf("sandbox ptr: %p\n", sandbox_ptr);
 
@@ -79,11 +76,10 @@ int main()
         // loops twice to check for differing results
         for (size_t x = 0; x < 2; x++)
         {
-            // clears sandbox memory
-            memset(sandbox_ptr, 0, page_size * sandbox_pages);
-
             if (sigsetjmp(jump_buffer, 1) == 0)
             {
+                prepare_sandbox(sandbox_ptr);
+
                 // replace nop with fuzzed instruction
                 instrs[0] = fuzz_buffer[i];
 
@@ -94,7 +90,6 @@ int main()
 
                 // print_registers("Registers Before", regs_before);
                 // print_registers("Registers After", regs_after);
-
                 // print_reg_changes(regs_before, regs_after);
             }
             else

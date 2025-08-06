@@ -23,8 +23,8 @@ uint64_t regs_after[32];
 static char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
 size_t page_size = 4096;
-size_t sandbox_pages = 1;      // 4 KB sandbox
-size_t guard_pages = 16;       // 64 KB guards (tunable)
+size_t sandbox_pages = 1; // 4 KB sandbox
+size_t guard_pages = 16;  // 64 KB guards (tunable)
 
 /*
 Code for client (RISC-V board)
@@ -59,22 +59,46 @@ uint8_t *allocate_executable_buffer()
     }
 
     uint8_t *sandbox = buf + guard_pages * page_size;
-    if (mprotect(sandbox, sandbox_pages * page_size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
+    return sandbox;
+}
+
+void prepare_sandbox(uint8_t *sandbox_ptr)
+{
+    // Reset sandbox to PROT_NONE after each run
+    if (mprotect(sandbox_ptr, sandbox_size, PROT_NONE) != 0)
     {
-        perror("mprotect");
+        perror("mprotect NONE");
         exit(1);
     }
-
-    return sandbox;
 }
 
 void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t num_instrs)
 {
-    // Fill sandbox with ebreak paddings (0x00100073)
-    memset(sandbox_ptr, 0x73, sandbox_pages * page_size);
+    // enable write access
+    if (mprotect(sandbox_ptr, sandbox_pages * page_size, PROT_READ | PROT_WRITE) != 0)
+    {
+        perror("mprotect");
+        exit(1);
+    }
+    // Fill sandbox with ebreak (0x00100073)
+    size_t num_words = sandbox_size / sizeof(uint32_t);
+    for (size_t i = 0; i < num_words; i++)
+    {
+        sandbox_ptr[i] = 0x00100073;
+    }
 
+    // copy fuzzed instructions
     memcpy(sandbox_ptr + start_offset, instrs, num_instrs * sizeof(uint32_t));
+
+    // flush instruction cache, preventing inconsisten results
     asm volatile("fence.i" ::: "memory");
+
+    // make page executable
+    if (mprotect(sandbox_ptr, sandbox_size, PROT_READ | PROT_EXEC) != 0)
+    {
+        perror("mprotect RX");
+        exit(1);
+    }
 }
 
 // Signal handler for SIGILL and SIGSEGV
@@ -130,7 +154,7 @@ void setup_signal_handlers()
 
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
-    sa.sa_sigaction = (void*)signal_trampoline;
+    sa.sa_sigaction = (void *)signal_trampoline;
     sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
     sigemptyset(&sa.sa_mask);
