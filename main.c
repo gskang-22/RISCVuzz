@@ -23,19 +23,25 @@ extern sigjmp_buf jump_buffer;
 extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
 
+extern uint32_t fuzz_buffer[];
+extern size_t fuzz_buffer_len;
+
 extern size_t sandbox_pages;
 extern size_t page_size;
 
 uint8_t *sandbox_ptr;
 size_t start_offset = 0x20;
+/*
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x00000013, // nop
     0x10028027, // ghostwrite
     0xFFFFFFFF, // illegal instruction
-    0x00008067, // ret
-    0xFFFFFFFF, // illegal instruction
-};
+    0x00008067, // ret 
+    0x00050067,	// jump to x10
+    0x00048067,	// jump to x9
+    0x00058067,	// jump to x11
+};*/
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
@@ -69,7 +75,7 @@ int main()
     sandbox_ptr = allocate_executable_buffer();
     printf("sandbox ptr: %p\n", sandbox_ptr);
 
-    for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
+    for (size_t i = 0; i < fuzz_buffer_len; i++)
     {
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
