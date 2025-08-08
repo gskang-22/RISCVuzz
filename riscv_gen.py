@@ -496,10 +496,17 @@ def main():
                      seed=args.seed)
     # write little-endian 32-bit words to stdout
     # (use buffer write for speed)
-    out = sys.stdout.buffer
-    for w in words:
-        print(f"{w:08x}")
+#    out = sys.stdout.buffer
+#    for w in words:
+#        print(f"{w:08x}")
 #        out.write(struct.pack("<I", w))
+
+    print("#include <stdint.h>\n#include <stddef.h>");
+    print("uint32_t fuzz_buffer[] = {")
+    for w in words:
+        print(f"    0x{w:08x},")
+    print("};")
+    print("const size_t fuzz_buffer_len = sizeof(fuzz_buffer) / sizeof(uint32_t);");
 
 if __name__ == "__main__":
     main()
