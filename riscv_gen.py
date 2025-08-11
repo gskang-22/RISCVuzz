@@ -33,10 +33,12 @@ OP_SYSTEM = 0x73   # 1110011
 OP_AMO    = 0x2f   # 0101111 (AMO/Atomic)
 OP_FPU    = 0x53   # 1010011 (FP)
 OP_VECTOR = 0x57   # 1010111 (RVV, OP-V/OPIVV space)
+OP_FMA    = 0x5b   # (fused multiply-add)
 
-GPRs = list(range(32))
+GPRs = list(range(31)) # 31 since x31 shld not be touched
 VREGS = list(range(32))
 FREGS = list(range(32))
+fence_called = False
 
 def rd_bits(rd): return (rd & 0x1f) << 7
 def rs1_bits(rs1): return (rs1 & 0x1f) << 15
@@ -97,153 +99,183 @@ def encode_j(imm21, rd, opcode):
                 opcode_bits(opcode) )
     return encoded
 
-# helpers for imm selection (signed)
+# helpers for imm selection
+# random signed immediate generator
 def rand_simm(bits):
+    if random.randint(0, 7) != 0:  # 7 out of 8 times
+        return random.choice([-1, 0])
     lo = -(1 << (bits-1))
     hi = (1 << (bits-1)) - 1
     return random.randint(lo, hi)
-
+# random unsigned immediate generator 
 def rand_uimm(bits):
-    return random.randint(0, (1<<bits)-1)
+    if random.randint(0, 7) != 0:  # 7 out of 8 times
+        return random.choice([0, (1 << bits) - 1])  # 0 or max unsigned (like all-1s)
+    return random.randint(0, (1 << bits) - 1)
+
+
 
 # mapping instruction -> (type, funct3, funct7/opcode fam)
 # We'll implement many common mnemonics below. CSR mnemonics are intentionally omitted.
 
-R_ALU = {
-    "add":  (0x0, 0x00),
-    "sub":  (0x0, 0x20),
-    "sll":  (0x1, 0x00),
-    "slt":  (0x2, 0x00),
-    "sltu": (0x3, 0x00),
-    "xor":  (0x4, 0x00),
-    "srl":  (0x5, 0x00),
-    "sra":  (0x5, 0x20),
-    "or":   (0x6, 0x00),
-    "and":  (0x7, 0x00),
-}
+RV32I_TEMPLATES = [
+    # R-type (opcode 0x33)
+    ("ADD", "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x00}),
+    ("SUB", "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x20}),
+    ("SLL", "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x00}),
+    ("SLT", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x00}),
+    ("SLTU","R", {"opcode":OP_R, "funct3":0x3, "funct7":0x00}),
+    ("XOR", "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x00}),
+    ("SRL", "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x00}),
+    ("SRA", "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x20}),
+    ("OR",  "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x00}),
+    ("AND", "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x00}),
 
-I_ALU = {
-    "addi": 0x0,
-    "slti": 0x2,
-    "sltiu":0x3,
-    "xori": 0x4,
-    "ori":  0x6,
-    "andi": 0x7,
-}
+    # I-type (opcode 0x13)
+    ("ADDI","I", {"opcode":OP_IMM, "funct3":0x0}),
+    ("SLTI","I", {"opcode":OP_IMM, "funct3":0x2}),
+    ("SLTIU","I",{"opcode":OP_IMM, "funct3":0x3}),
+    ("XORI","I", {"opcode":OP_IMM, "funct3":0x4}),
+    ("ORI", "I", {"opcode":OP_IMM, "funct3":0x6}),
+    ("ANDI","I", {"opcode":OP_IMM, "funct3":0x7}),
 
-# shift-immediate use funct3 = 1 or 5 and shamt in imm field, funct7 may be 0 or 0x20
-I_SHIFTS = {"slli": (0x1,0x00), "srli":(0x5,0x00), "srai":(0x5,0x20)}
+    # I_SHIFTS (I-type, opcode 0x13)
+    ("SLLI", "SHIFT", {"opcode":OP_IMM, "funct3":0x1, "funct7":0x00}),    
+    ("SRLI", "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x00}),    
+    ("SRAI", "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x20}),  
 
-LOADS = {
-    "lb": 0x0,
-    "lh": 0x1,
-    "lw": 0x2,
-    "lwu": 0x6,    # for RV64
-    "ld": 0x3      # for RV64
-}
+    # Loads (I-type, opcode 0x03)
+    ("LB",  "I", {"opcode":OP_LOAD, "funct3":0x0}),
+    ("LH",  "I", {"opcode":OP_LOAD, "funct3":0x1}),
+    ("LW",  "I", {"opcode":OP_LOAD, "funct3":0x2}),
+    ("LBU", "I", {"opcode":OP_LOAD, "funct3":0x4}),   # missing in your list
+    ("LHU", "I", {"opcode":OP_LOAD, "funct3":0x5}),   # missing in your list
+    ("LWU", "I", {"opcode":OP_LOAD, "funct3":0x6}),   # RV64 only
+    ("LD",  "I", {"opcode":OP_LOAD, "funct3":0x3}),   # RV64 only
 
-STORES = {
-    "sb": 0x0,
-    "sh": 0x1,
-    "sw": 0x2,
-    "sd": 0x3
-}
+    # Stores (S-type, opcode 0x23)
+    ("SB", "S", {"opcode":OP_STORE, "funct3":0x0}),
+    ("SH", "S", {"opcode":OP_STORE, "funct3":0x1}),
+    ("SW", "S", {"opcode":OP_STORE, "funct3":0x2}),
+    ("SD", "S", {"opcode":OP_STORE, "funct3":0x3}),     # RV64 only
 
-BRANCHES = {
-    "beq": 0x0,
-    "bne": 0x1,
-    "blt": 0x4,
-    "bge": 0x5,
-    "bltu":0x6,
-    "bgeu":0x7
-}
+    # Branches (B-type, opcode 0x63)
+    ("BEQ",  "B", {"opcode":OP_BRANCH, "funct3":0x0}),
+    ("BNE",  "B", {"opcode":OP_BRANCH, "funct3":0x1}),
+    ("BLT",  "B", {"opcode":OP_BRANCH, "funct3":0x4}),
+    ("BGE",  "B", {"opcode":OP_BRANCH, "funct3":0x5}),
+    ("BLTU", "B", {"opcode":OP_BRANCH, "funct3":0x6}),
+    ("BGEU", "B", {"opcode":OP_BRANCH, "funct3":0x7}),
 
-M_OPS = {
-    "mul": (0x0, 0x01),
-    "mulh":(0x1, 0x01),
-    "mulhsu":(0x2,0x01),
-    "mulhu":(0x3,0x01),
-    "div":(0x4,0x01),
-    "divu":(0x5,0x01),
-    "rem":(0x6,0x01),
-    "remu":(0x7,0x01)
-}
+    # Jumps and upper immediates
+    ("JAL",   "J",  {"opcode":OP_JAL}),
+    ("JALR",  "I", {"opcode":OP_JALR, "funct3":0x0}),  # I-type
+    ("LUI",   "U",  {"opcode":OP_LUI}),
+    ("AUIPC", "U",  {"opcode":OP_AUIPC}),
 
-# Atomic AMO: use opcode OP_AMO (0x2f) and funct3 usually 0x2 (word/dword)
-AMO_OPS = [
-    # We'll emit common template AMOs with funct5 or funct? encoded in funct7's upper bits; simplified
-    ("amoswap.w", 0x2, 0x01),
-    ("amoadd.w", 0x2, 0x00),
-    ("amoxor.w",  0x2, 0x04),
-    ("amoand.w",  0x2, 0x0c),
-    ("amoor.w",   0x2, 0x08),
-    ("amomin.w",  0x2, 0x10),
-    ("amomax.w",  0x2, 0x14),
-    ("amominu.w", 0x2, 0x18),
-    ("amomaxu.w", 0x2, 0x1c),
+    # fences and misc
+    ("FENCE",  "FENCE", {"opcode":OP_MISC,   "funct3":0x00}),
+    ("ECALL",  "SYS",   {"opcode":OP_SYSTEM, "imm":0x00}),
+    ("EBREAK", "SYS",   {"opcode":OP_SYSTEM, "imm":0x01}),
 ]
 
-# FP ops (OP_FPU=0x53) simple subset
-F_OPS = {
-    "fadd.s": (0x0, 0x00), "fsub.s": (0x0, 0x08), "fmul.s": (0x0, 0x10), "fdiv.s": (0x0, 0x18),
-    "fadd.d": (0x1, 0x00), "fsub.d": (0x1, 0x08), "fmul.d": (0x1, 0x10), "fdiv.d": (0x1, 0x18),
-}
+M_TEMPLATES = [
+    # M_OPS (R-type, opcode 0x33)
+    ("MUL",    "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x01}),   
+    ("MULH",   "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x01}),   
+    ("MULHSU", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x01}),   
+    ("MULHU",  "R", {"opcode":OP_R, "funct3":0x3, "funct7":0x01}),   
+    ("DIV",    "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x01}),   
+    ("DIVU",   "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x01}),   
+    ("REM",    "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x01}),   
+    ("REMU",   "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x01}),     
+]
 
-# vector ops: best-effort list (we will produce encodings in OP_VECTOR space)
-V_OPS = [
-    "vadd.vv", "vsub.vv", "vand.vv", "vor.vv", "vxor.vv",
-    "vmul.vv", "vdiv.vv"  # vmul/vdiv are high-level placeholders (RVV real encodings differ)
+AMO_TEMPLATES = [
+    # Atomic AMO
+    ("AMOSWAP.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x01}),
+    ("AMOADD.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x00}),
+    ("AMOXOR.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x04}),
+    ("AMOAND.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x0c}),
+    ("AMOOR.W",   "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x08}),
+    ("AMOMIN.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x10}),
+    ("AMOMAX.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x14}),
+    ("AMOMINU.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x18}),
+    ("AMOMAXU.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x1c}),
+]
+
+FLOATING_TEMPLATES = [
+    # Floating-point operations (F and D precision)
+    ("FADD.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x00}),
+    ("FSUB.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x08}),
+    ("FMUL.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x10}),
+    ("FDIV.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x18}),
+
+    ("FADD.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x00}),
+    ("FSUB.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x08}),
+    ("FMUL.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x10}),
+    ("FDIV.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x18}),
+]
+
+# Minimal vector-like templates (R-type with opcode 0x57). These are simple approximations to include vector encodings.
+VECTOR_TEMPLATES = [
+    ("VADD_VV",  "RV",  {"opcode": OP_VECTOR, "funct6": 0x00, "funct3": 0x0}),
+    ("VSUB_VV",  "RV",  {"opcode": OP_VECTOR, "funct6": 0x04, "funct3": 0x0}),
+    ("VMUL_VV",  "RV",  {"opcode": OP_VECTOR, "funct6": 0x01, "funct3": 0x0}),
+    ("VDIV_VV",  "RV",  {"opcode": OP_VECTOR, "funct6": 0x02, "funct3": 0x0}),
+    ("VAND_VV",  "RV",  {"opcode": OP_VECTOR, "funct6": 0x07, "funct3": 0x0}),
+    ("VOR_VV",   "RV",  {"opcode": OP_VECTOR, "funct6": 0x06, "funct3": 0x0}),
+    ("VXOR_VV",  "RV",  {"opcode": OP_VECTOR, "funct6": 0x05, "funct3": 0x0}),
+
+    # R4-type (e.g. fused multiply-add)
+    ("VFMADD_VV",  "R4", {"opcode": OP_FMA, "funct6": 0x00, "funct3": 0x0}),
+    ("VFNMADD_VV", "R4", {"opcode": OP_FMA, "funct6": 0x01, "funct3": 0x0}),
+    ("VFMSUB_VV",  "R4", {"opcode": OP_FMA, "funct6": 0x02, "funct3": 0x0}),
+    ("VFNMSUB_VV", "R4", {"opcode": OP_FMA, "funct6": 0x03, "funct3": 0x0}),
+
+    # I-type vector instructions (shifts)
+    ("VSLL_VI", "I", {"opcode": OP_VECTOR, "funct6": 0x08, "funct3": 0x1}),
+    ("VSRL_VI", "I", {"opcode": OP_VECTOR, "funct6": 0x09, "funct3": 0x1}),
+    ("VSRA_VI", "I", {"opcode": OP_VECTOR, "funct6": 0x0a, "funct3": 0x1}),
+
+    # M-type (vector mask instructions)
+    ("VMAND_MM",   "M", {"opcode": OP_VECTOR, "funct6": 0x20, "funct3": 0x7}),
+    ("VMNAND_MM",  "M", {"opcode": OP_VECTOR, "funct6": 0x21, "funct3": 0x7}),
+    ("VMOR_MM",    "M", {"opcode": OP_VECTOR, "funct6": 0x22, "funct3": 0x7}),
+    ("VMNOR_MM",   "M", {"opcode": OP_VECTOR, "funct6": 0x23, "funct3": 0x7}),
+    ("VMXOR_MM",   "M", {"opcode": OP_VECTOR, "funct6": 0x24, "funct3": 0x7}),
+    ("VMXNOR_MM",  "M", {"opcode": OP_VECTOR, "funct6": 0x25, "funct3": 0x7}),
+    ("VMORNOT_MM", "M", {"opcode": OP_VECTOR, "funct6": 0x26, "funct3": 0x7}),
+
+    ("VADD.VX",  "VECTOR", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x01}),
+    ("VSUB.VX",  "VECTOR", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x05}),
+    ("VMUL.VX",  "VECTOR", {"opcode": OP_VECTOR, "funct3":0x1, "funct6":0x01}),       
 ]
 
 # build instruction pool based on flags
 def build_pool(xlen, enable_m, enable_amo, enable_f, enable_vector):
     pool = []
-    # base R types
-    for op in R_ALU.keys():
-        pool.append(("R", op))
-    for op in I_ALU.keys():
-        pool.append(("I", op))
-    # shifts
-    for op in I_SHIFTS.keys():
-        pool.append(("SHIFT", op))
-    # loads/stores
-    load_ops = ["lb","lh","lw"]
-    store_ops = ["sb","sh","sw"]
-    if xlen == 64:
-        load_ops += ["lwu","ld"]
-        store_ops += ["sd"]
-    for op in load_ops:
-        pool.append(("LOAD", op))
-    for op in store_ops:
-        pool.append(("STORE", op))
-    # branches, jal, jalr, lui, auipc
-    for op in BRANCHES.keys():
-        pool.append(("BR", op))
-    pool += [("J","jal"), ("JR","jalr"), ("U","lui"), ("U","auipc")]
+    for entry in RV32I_TEMPLATES:
+        pool.append(entry)
+
     # M extension
     if enable_m:
-        for op in M_OPS.keys():
-            pool.append(("M", op))
+        for entry in M_TEMPLATES:
+            pool.append(entry)
     # AMO
     if enable_amo:
-        for name, f3, f5 in AMO_OPS:
-            pool.append(("AMO", name))
+        for entry in AMO_TEMPLATES:
+            pool.append(entry)
     # Floating
     if enable_f:
-        for op in F_OPS.keys():
-            pool.append(("F", op))
-        # simple fp loads/stores
-        if xlen==32:
-            pool += [("FLOAD","flw"), ("FSTORE","fsw")]
-        else:
-            pool += [("FLOAD","flw"), ("FSTORE","fsw"), ("FLOAD","fld"), ("FSTORE","fsd")]
+        for entry in FLOATING_TEMPLATES:
+            pool.append(entry)
     # vector
     if enable_vector:
-        for op in V_OPS:
-            pool.append(("V", op))
-    # fences and misc
-    pool += [("FENCE","fence"), ("SYS","ecall"), ("SYS","ebreak")]
-    return pool
+        for entry in VECTOR_TEMPLATES:
+            pool.append(entry)
+
+    return entry
 
 # Random generators producing immediates and registers then encoding:
 def pick_gpr(avoid_zero=False):
@@ -259,36 +291,52 @@ def pick_fpr():
 def pick_vreg():
     return random.choice(VREGS)
 
-def emit_r_ins(op, xlen):
+def emit_r_ins(entry, xlen):
+    # For R entries 
     rd = pick_gpr(avoid_zero=True)
     rs1 = pick_gpr()
     rs2 = pick_gpr()
-    if op in R_ALU:
-        f3, f7 = R_ALU[op]
-        enc = encode_r(f7, rs2, rs1, f3, rd, OP_R)
-        return enc
-    # fallback as add
-    return encode_r(0x00, rs2, rs1, 0x0, rd, OP_R)
 
-def emit_i_ins(op, xlen):
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    f7 = fields["funct7"]
+    opcode = fields["opcode"]
+
+    enc = encode_r(f7, rs2, rs1, f3, rd, opcode)
+    return enc
+
+def emit_i_ins(entry, xlen):
+    # For I entries
     rd = pick_gpr(avoid_zero=True)
     rs1 = pick_gpr()
-    if op in I_ALU:
-        f3 = I_ALU[op]
-        imm = rand_simm(12)
-        return encode_i(imm, rs1, f3, rd, OP_IMM)
-    # fallback
     imm = rand_simm(12)
-    return encode_i(imm, rs1, 0, rd, OP_IMM)
 
-def emit_shift_ins(op, xlen):
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    opcode = fields["opcode"]
+
+    return encode_i(imm, rs1, f3, rd, opcode)
+
+def emit_shift_ins(entry, xlen):
     rd = pick_gpr(avoid_zero=True)
     rs1 = pick_gpr()
     shamt_max = 31 if xlen==32 else 63
     shamt = random.randint(0, shamt_max)
-    f3, f7 = I_SHIFTS[op]
+
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    f7 = fields["funct7"]
+    opcode = fields["opcode"]
+
     # encode shamt in imm[5:0] or imm[4:0] for RV32; when f7 != 0, set in funct7's low bits
-    imm = shamt & 0xfff
+    if xlen == 32:
+        shamt_masked = shamt & 0x1f
+    else:
+        shamt_masked = shamt & 0x3f
+        
+    imm12 = (f7 << 5) | shamt_masked
+    return encode_i(imm12, rs1, f3, rd, opcode)
+
     # for srai, need top bits set -> encode funct7 0x20 in place: we will set funct7 in funct7_bits
     # Note: Encoding shifts uses opcode OP_IMM with imm[11:0] containing shamt and possibly funct7 in upper bits for RV64; but we construct accordingly:
     if op == "srai":
@@ -303,78 +351,60 @@ def emit_shift_ins(op, xlen):
         imm12 = ((0x00 & 0x7f) << 5) | (shamt & 0x1f)
         return encode_i(imm12, rs1, f3, rd, OP_IMM)
 
-def emit_load(op, xlen):
-    rd = pick_gpr(avoid_zero=True)
-    rs1 = pick_gpr()
-    imm = rand_simm(12)
-    f3 = LOADS.get(op, 0)
-    return encode_i(imm, rs1, f3, rd, OP_LOAD)
-
-def emit_store(op, xlen):
+def emit_store(entry, xlen):
+    # For S entries (Store)
     rs2 = pick_gpr()
     rs1 = pick_gpr()
     imm = rand_simm(12)
-    f3 = STORES.get(op, 0)
-    return encode_s(imm, rs2, rs1, f3, OP_STORE)
 
-def emit_branch(op, xlen):
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    opcode = fields["opcode"]
+
+    return encode_s(imm, rs2, rs1, f3, opcode)
+
+def emit_branch(entry, xlen):
+    # For B entries (Branch)
     rs1 = pick_gpr()
     rs2 = pick_gpr()
     # choose branch offset aligned to 2 (lowest bit zero); limit magnitude
     imm = random.choice([4,8,12,16,-4,-8,-12,-16, random.randint(-2048,2048)])
-    f3 = BRANCHES.get(op, 0)
-    return encode_b(imm, rs2, rs1, f3, OP_BRANCH)
+
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    opcode = fields["opcode"]
+
+    return encode_b(imm, rs2, rs1, f3, opcode)
 
 def emit_jal(xlen):
     rd = pick_gpr(avoid_zero=True)
     imm = random.randint(- (1<<20), (1<<20)-1)
+
     return encode_j(imm, rd, OP_JAL)
 
-def emit_jalr(xlen):
-    rd = pick_gpr(avoid_zero=True)
-    rs1 = pick_gpr()
-    imm = rand_simm(12)
-    return encode_i(imm, rs1, 0x0, rd, OP_JALR)
-
-def emit_u(op, xlen):
+def emit_u(entry, xlen):
+    # For U entries 
     rd = pick_gpr(avoid_zero=True)
     imm = rand_simm(20)
-    opc = OP_LUI if op=="lui" else OP_AUIPC
-    return encode_u(imm, rd, opc)
 
-def emit_m(op, xlen):
-    # use R-type encoding in OP_R space but funct7 = 0x01
-    rd = pick_gpr(avoid_zero=True)
-    rs1 = pick_gpr()
-    rs2 = pick_gpr()
-    f3, f7_base = M_OPS[op]
-    return encode_r(f7_base, rs2, rs1, f3, rd, OP_R)
+    name, instr_type, fields = entry
+    opcode = fields["opcode"]
 
-def emit_amo(name, xlen):
-    # simplified: use OP_AMO opcode, funct3 field 0x2 (word/dword), encode an amo funct5 in upper bits of funct7.
-    rd = pick_gpr(avoid_zero=True)
-    rs1 = pick_gpr()
-    rs2 = pick_gpr()
-    # pick matching AMO_OPS entry
-    entry = random.choice(AMO_OPS)
-    name, f3, func5 = entry
-    # Put func5 in bits[31:27] (high portion of funct7) and set lowest two bits of funct7 to 0
-    funct7 = (func5 & 0x1f) << 2
-    return encode_r(funct7, rs2, rs1, f3, rd, OP_AMO)
+    return encode_u(imm, rd, opcode)
 
-def emit_fp(op, xlen):
-    # emit simple FP op in OP_FPU space (requires FP regs)
+def emit_fp(entry, xlen):
+    # For F entries (requires FP regs)
     rd = pick_fpr()
     rs1 = pick_fpr()
     rs2 = pick_fpr()
-    # map op to (fmt, funct7-like)
-    t = F_OPS.get(op, (0x0,0x00))
-    fmt, func7 = t
-    # encode as R-type in OP_FPU but place fmt in funct3 (approx)
-    f3 = fmt & 0x7
-    funct7 = func7 & 0x7f
+
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    f7 = fields["funct7"]
+    opcode = fields["opcode"]
+
     # for fp we use rd/rs1/rs2 mapped into integer fields (assembler treats them specially)
-    return encode_r(funct7, rs2, rs1, f3, rd, OP_FPU)
+    return encode_r(f7, rs2, rs1, f3, rd, opcode)
 
 def emit_fload(op, xlen):
     rd = pick_fpr()
@@ -393,31 +423,45 @@ def emit_fstore(op, xlen):
     # encode S-type with rs2 field holding fp reg index value
     return encode_s(imm, rs2, rs1, f3, OP_STORE)
 
-def emit_fence():
-    # fence (0) and fence.i (0x1??) — we'll use OP_MISC opcode with funct3 zero
-    # fence has imm fields but simplest emit 0
-    imm = 0
-    rd=0; rs1=0
-    return encode_i(imm, rs1, 0, rd, OP_MISC)
+def emit_fence(entry, xlen):
+    rd=0
+    rs1=0
+    f3 = 0  # for both fence and fence.i
 
-def emit_sys(name):
-    # ecall/ebreak use OP_SYSTEM with funct3=0 and imm numbers 0/1
-    if name == "ecall":
-        imm = 0
-    else:
+    # calls fence once, then calls fence.i afterwards 
+    if not fence_called:
+        # FENCE.I
         imm = 1
-    return encode_i(imm, 0, 0, 0, OP_SYSTEM)
+        fence_called = True
+    else:
+        # FENCE: randomize pred and succ (imm[7:4], imm[3:0])
+        pred = random.randint(0, 0xF)
+        succ = random.randint(0, 0xF)
+        imm = (pred << 4) | succ
+    
+    return encode_i(imm, rs1, f3, rd, OP_MISC)
 
-def emit_vector(op, xlen):
+def emit_sys(entry, xlen):
+    # ecall/ebreak with imm numbers 0/1
+
+    name, instr_type, fields = entry
+    imm = fields["imm"]
+    opcode = fields["opcode"]
+
+    return encode_i(imm, 0, 0, 0, opcode)
+
+def emit_vector(entry, xlen):
     # Best-effort OP_VECTOR encoding:
     vd = pick_vreg()
     vs1 = pick_vreg()
     vs2 = pick_vreg()
-    # choose random funct6 and vm bit
-    funct6 = random.randint(0, 0x3f)
     vm = random.randint(0,1)
-    funct3 = 0  # many RVV use funct3=0, but not always — this is a simplified approach
-    opcode = OP_VECTOR
+
+    name, instr_type, fields = entry
+    opcode = fields["opcode"]
+    f3 = fields.get("funct3")
+    f6 = fields.get("funct6")
+
     # place bits:
     # funct6 -> bits 26..31
     # vm -> bit 25
@@ -425,7 +469,7 @@ def emit_vector(op, xlen):
     # rs1 -> bits15..19 (vs1)
     # funct3 -> bits12..14
     # rd -> bits7..11 (vd)
-    encoded = ( (funct6 & 0x3f) << 26 ) | ((vm & 0x1) << 25) | ( (vs2 & 0x1f) << 20) | ( (vs1 & 0x1f) << 15) | ((funct3 & 0x7) << 12) | ((vd & 0x1f) << 7) | (opcode & 0x7f)
+    encoded = ( (f6 & 0x3f) << 26 ) | ((vm & 0x1) << 25) | ( (vs2 & 0x1f) << 20) | ( (vs1 & 0x1f) << 15) | ((f3 & 0x7) << 12) | ((vd & 0x1f) << 7) | (opcode & 0x7f)
     return encoded
 
 # main generator
@@ -437,39 +481,35 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
     out_words = []
     for _ in range(count):
         typ, op = random.choice(pool)
-        if typ == "R":
+        if typ == "R" or "AMO":
             w = emit_r_ins(op, xlen)
         elif typ == "I":
             w = emit_i_ins(op, xlen)
         elif typ == "SHIFT":
             w = emit_shift_ins(op, xlen)
-        elif typ == "LOAD":
-            w = emit_load(op, xlen)
-        elif typ == "STORE":
+        elif typ == "S":
             w = emit_store(op, xlen)
-        elif typ == "BR":
+        elif typ == "B":
             w = emit_branch(op, xlen)
         elif typ == "J":
             w = emit_jal(xlen)
-        elif typ == "JR":
-            w = emit_jalr(xlen)
         elif typ == "U":
             w = emit_u(op, xlen)
         elif typ == "M":
-            w = emit_m(op, xlen)
-        elif typ == "AMO":
-            w = emit_amo(op, xlen)
+            # todo 
+            break
         elif typ == "F":
             w = emit_fp(op, xlen)
         elif typ == "FLOAD":
             w = emit_fload(op, xlen)
+            # todo: add FLW, FLD (FLOAD) FSW, FSD (FSTORE)
         elif typ == "FSTORE":
             w = emit_fstore(op, xlen)
         elif typ == "FENCE":
             w = emit_fence()
         elif typ == "SYS":
             w = emit_sys(op)
-        elif typ == "V":
+        elif typ == "RV":
             w = emit_vector(op, xlen)
         else:
             w = 0x00000013  # nop (addi x0,x0,0)
