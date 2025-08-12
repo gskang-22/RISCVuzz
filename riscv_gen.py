@@ -2,18 +2,12 @@
 """
 riscv_bin_gen.py — Random RISC-V binary instruction generator.
 
-Outputs 32-bit instruction words (little-endian) to stdout.
-
 Features:
 - Base RV32/64 instructions (R/I/S/B/U/J formats)
 - Optional M-extension, AMO, FP instructions
-- Optional RVV-ish vector instruction encodings (best-effort)
+- Optional RVV-ish vector instruction encodings
 - CSR ops removed entirely
 - Configurable RNG seed and count
-
-Limitations:
-- RVV encodings are approximate (funct6 + vm + vs2 + vs1 + funct3 + vd + opcode)
-- Does not emit ELF or assemble; raw 4-byte instruction words only.
 """
 
 from config import *
@@ -35,7 +29,7 @@ def rand_uimm(bits):
 
 # Random generators producing registers:
 def pick_gpr(avoid_zero=False, exclude=None):
-    if random.random() < GPR_SPECIAL:  # n% special
+    if random.random() < GPR_SPECIAL:
         return random.choice(SPECIAL_GPRS)
     
     base_exclude = {9}    # Start with x9 always excluded
@@ -486,12 +480,14 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
             w = 0x00000013  # nop (addi x0,x0,0)
 
         out_words.append(w & 0xffffffff)
-        # randomly flip bits, increasing number and randomness of instructions generated
-        w = flip_bits(w)
-        out_words.append(w & 0xffffffff)
-        # flip endianess of instruction
-        w = flip_endian_32(w)
-        out_words.append(w & 0xffffffff)
+        if random.random() < FLIP_PROBABILITY:
+            # randomly flip bits, increasing number and randomness of instructions generated
+            w = flip_bits(w)
+            out_words.append(w & 0xffffffff)
+        if random.random() < ENDIAN_PROBABILITY:
+            # flip endianess of instruction
+            w = flip_endian_32(w)
+            out_words.append(w & 0xffffffff)
 
     return out_words
 

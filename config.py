@@ -1,3 +1,5 @@
+# Contains configuration variables and definitions for server side code 
+# Used for automated generation of instructions in riscv_gen.py
 
 GPRs = list(range(32))
 VREGS = list(range(32))
@@ -10,11 +12,13 @@ SPECIAL_VREGS = [0, 1, 31]
 SPECIAL_SIMMS = [0, 1, -1, (1 << 11) - 1, -(1 << 11)]
 SPECIAL_UIMMS = [0, 1, (1 << 12) - 1, (1 << 12), (1 << 10)]
 
+# probability that the special test values are used 
 GPR_SPECIAL = 0.2
 FPR_SPECIAL = 0.2
 VREG_SPECIAL = 0.3
 IMM_SPECIAL = 0.875
 
+# probability to generate an extra instruction (with bit/endian flipped)
 FLIP_PROBABILITY = 0.5
 ENDIAN_PROBABILITY = 0.5
 
