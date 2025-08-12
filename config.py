@@ -15,6 +15,9 @@ FPR_SPECIAL = 0.2
 VREG_SPECIAL = 0.3
 IMM_SPECIAL = 0.875
 
+FLIP_PROBABILITY = 0.5
+ENDIAN_PROBABILITY = 0.5
+
 # Opcodes (7-bit) — canonical major opcode values
 OP_R        = 0x33   # 0110011
 OP_IMM      = 0x13   # 0010011
@@ -28,11 +31,13 @@ OP_STORE    = 0x23   # 0100011
 OP_MISC     = 0x0f   # 0001111 (fence)
 OP_SYSTEM   = 0x73   # 1110011
 OP_AMO      = 0x2f   # 0101111 (AMO/Atomic)
+
 OP_FPU      = 0x53   # 1010011 (FP)
-OP_VECTOR   = 0x57   # 1010111 (RVV, OP-V/OPIVV space)
-OP_FMA      = 0x5b   # (fused multiply-add)
 OP_LOAD_FP  = 0x07   # floating-point load
 OP_STORE_FP = 0x27   # floating-point store
+
+OP_VECTOR   = 0x57   # 1010111 (RVV, OP-V/OPIVV space)
+OP_FMA      = 0x5b   # (fused multiply-add)
 
 # We'll implement many common mnemonics below. CSR mnemonics are intentionally omitted.
 RV32I_TEMPLATES = [
@@ -109,7 +114,7 @@ M_TEMPLATES = [
 ]
 
 AMO_TEMPLATES = [
-    # Atomic AMO
+    # Atomic AMO (opcode 0x2f)
     ("AMOSWAP.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x01}),
     ("AMOADD.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x00}),
     ("AMOXOR.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x04}),
@@ -122,7 +127,7 @@ AMO_TEMPLATES = [
 ]
 
 FLOATING_TEMPLATES = [
-    # Floating-point operations (F and D precision)
+    # Floating-point operations (F and D precision) (opcode 0x53)
     ("FADD.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x00}),
     ("FSUB.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x08}),
     ("FMUL.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x10}),
@@ -133,14 +138,13 @@ FLOATING_TEMPLATES = [
     ("FMUL.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x10}),
     ("FDIV.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x18}),
     
-    # Floating-point loads (FLOAD)
+    # Floating-point loads (FLOAD) (opcode 0x07)
     ("FLW", "FLOAD", {"opcode": OP_LOAD_FP, "funct3": 0x2}),
     ("FLD", "FLOAD", {"opcode": OP_LOAD_FP, "funct3": 0x3}),
 
-    # Floating-point stores (FSTORE)
+    # Floating-point stores (FSTORE) (opcode 0x27)
     ("FSW", "FSTORE", {"opcode": OP_STORE_FP, "funct3": 0x2}),
     ("FSD", "FSTORE", {"opcode": OP_STORE_FP, "funct3": 0x3}),
-
 ]
 
 # Minimal vector-like templates (R-type with opcode 0x57). These are simple approximations to include vector encodings.

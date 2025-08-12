@@ -418,6 +418,28 @@ def emit_vector_vx(entry, xlen):
 
     return encoded
 
+def flip_bits(inst_word, max_flips=3, flip_prob=0.5):
+    # With flip_prob chance, flip some bits
+    if random.random() > flip_prob:
+        return inst_word  # no flip
+
+    num_flips = random.randint(1, max_flips)  # how many bits to flip
+    bits_to_flip = random.sample(range(32), num_flips)  # pick unique bit positions
+    
+    mask = 0
+    for bit in bits_to_flip:
+        mask |= (1 << bit)
+    
+    flipped = inst_word ^ mask  # XOR flips the bits
+    return flipped
+
+def flip_endian_32(w):
+    b0 = (w & 0x000000FF) << 24
+    b1 = (w & 0x0000FF00) << 8
+    b2 = (w & 0x00FF0000) >> 8
+    b3 = (w & 0xFF000000) >> 24
+    return (b0 | b1 | b2 | b3) & 0xFFFFFFFF
+
 
 # main generator
 def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=False, enable_vector=False, seed=None):
@@ -462,7 +484,15 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
             w = emit_vector_vx((name, instr_type, fields), xlen)
         else:
             w = 0x00000013  # nop (addi x0,x0,0)
+
         out_words.append(w & 0xffffffff)
+        # randomly flip bits, increasing number and randomness of instructions generated
+        w = flip_bits(w)
+        out_words.append(w & 0xffffffff)
+        # flip endianess of instruction
+        w = flip_endian_32(w)
+        out_words.append(w & 0xffffffff)
+
     return out_words
 
 def main():
@@ -483,15 +513,8 @@ def main():
                      enable_f=args.enable_f,
                      enable_vector=args.enable_vector,
                      seed=args.seed)
-
-    words = generate(count=args.count,
-                     xlen=args.xlen,
-                     enable_m=args.enable_m,
-                     enable_amo=args.enable_amo,
-                     enable_f=args.enable_f,
-                     enable_vector=args.enable_vector,
-                     seed=args.seed)
     
+    # write ISA instructions to output.c
     with open("output.c", "w") as f:
         f.write("// Auto-generated instructions\n\n")
         f.write("#include <stdint.h>\n#include <stddef.h>\n\n")
@@ -499,8 +522,7 @@ def main():
         for w in words:
             f.write(f"    0x{w:08x},\n")
         f.write("};\n")
-        f.write("const size_t fuzz_buffer_len = sizeof(fuzz_buffer2) / sizeof(uint32_t);");
-
+        f.write("const size_t fuzz_buffer_len = sizeof(fuzz_buffer2) / sizeof(uint32_t);\n")
 
 if __name__ == "__main__":
     main()
