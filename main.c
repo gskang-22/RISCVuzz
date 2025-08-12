@@ -60,7 +60,7 @@ uint32_t fuzz_buffer[] = {
 uint32_t instrs[] = {
     0x00000013, // nop to be replaced
 
-    0x000F8067, // jalr x0, 0(t6)
+    0x00048067  // jalr x0, 0(x9)
 };
 
 const char *reg_names[] = {

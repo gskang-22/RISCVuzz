@@ -16,31 +16,46 @@ Limitations:
 - Does not emit ELF or assemble; raw 4-byte instruction words only.
 """
 
-import random, argparse, sys, time, struct
-
-# Opcodes (7-bit) — canonical major opcode values
-OP_R        = 0x33   # 0110011
-OP_IMM      = 0x13   # 0010011
-OP_LUI      = 0x37   # 0110111
-OP_AUIPC    = 0x17   # 0010111
-OP_JAL      = 0x6f   # 1101111
-OP_JALR     = 0x67   # 1100111
-OP_BRANCH   = 0x63   # 1100011
-OP_LOAD     = 0x03   # 0000011
-OP_STORE    = 0x23   # 0100011
-OP_MISC     = 0x0f   # 0001111 (fence)
-OP_SYSTEM   = 0x73   # 1110011
-OP_AMO      = 0x2f   # 0101111 (AMO/Atomic)
-OP_FPU      = 0x53   # 1010011 (FP)
-OP_VECTOR   = 0x57   # 1010111 (RVV, OP-V/OPIVV space)
-OP_FMA      = 0x5b   # (fused multiply-add)
-OP_LOAD_FP  = 0x07   # floating-point load
-OP_STORE_FP = 0x27   # floating-point store
-
-GPRs = list(range(31)) # 31 since x31 shld not be touched
-VREGS = list(range(32))
-FREGS = list(range(32))
+from config import *
+import random, argparse, time
 fence_called = False
+
+# random signed immediate generator
+def rand_simm(bits):
+    if random.random() < IMM_SPECIAL:
+        return random.choice(SPECIAL_SIMMS)
+    lo = -(1 << (bits-1))
+    hi = (1 << (bits-1)) - 1
+    return random.randint(lo, hi)
+# random unsigned immediate generator 
+def rand_uimm(bits):
+    if random.random() < IMM_SPECIAL:
+        return random.choice(SPECIAL_UIMMS)
+    return random.randint(0, (1 << bits) - 1)
+
+# Random generators producing registers:
+def pick_gpr(avoid_zero=False, exclude=None):
+    if random.random() < GPR_SPECIAL:  # n% special
+        return random.choice(SPECIAL_GPRS)
+    
+    base_exclude = {9}    # Start with x9 always excluded
+
+    if exclude:
+        base_exclude.update(exclude)  # add any extra exclusions
+    if avoid_zero:
+        base_exclude.add(0)
+
+    candidates = [r for r in range(32) if r not in base_exclude]
+    return random.choice(candidates)
+def pick_fpr():
+    if random.random() < FPR_SPECIAL:
+        return random.choice(SPECIAL_FPRS)
+    return random.choice(FREGS)
+def pick_vreg():
+    if random.random() < VREG_SPECIAL:
+        return random.choice(SPECIAL_VREGS)    
+    return random.choice(VREGS)
+
 
 def rd_bits(rd): return (rd & 0x1f) << 7
 def rs1_bits(rs1): return (rs1 & 0x1f) << 15
@@ -68,7 +83,7 @@ def encode_s(imm12, rs2, rs1, funct3, opcode):
 def encode_b(imm13, rs2, rs1, funct3, opcode):
     # imm13 is signed branch immediate (lowest bit zero). encode as imm[12|10:5][4:1|11]
     imm = imm13 & 0x1fff
-    imm_bit11 = (imm >> 11) & 0x1     # bit 11 -> imm[11]
+    imm_bit11 = (imm >> 11) & 0x1    # bit 11 -> imm[11]
     imm_lo = (imm >> 1) & 0xf        # bits 1..4 -> imm[4:1]
     imm_hi = (imm >> 5) & 0x3f       # bits 5..10 -> imm[10:5]
     imm_top = (imm >> 12) & 0x1      # bit12 -> imm[12]
@@ -100,169 +115,7 @@ def encode_j(imm21, rd, opcode):
                 rd_bits(rd) |
                 opcode_bits(opcode) )
     return encoded
-
-# helpers for imm selection
-# random signed immediate generator
-def rand_simm(bits):
-    if random.randint(0, 7) != 0:  # 7 out of 8 times
-        return random.choice([-1, 0])
-    lo = -(1 << (bits-1))
-    hi = (1 << (bits-1)) - 1
-    return random.randint(lo, hi)
-# random unsigned immediate generator 
-def rand_uimm(bits):
-    if random.randint(0, 7) != 0:  # 7 out of 8 times
-        return random.choice([0, (1 << bits) - 1])  # 0 or max unsigned (like all-1s)
-    return random.randint(0, (1 << bits) - 1)
-
-
-
-# mapping instruction -> (type, funct3, funct7/opcode fam)
-# We'll implement many common mnemonics below. CSR mnemonics are intentionally omitted.
-
-RV32I_TEMPLATES = [
-    # R-type (opcode 0x33)
-    ("ADD", "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x00}),
-    ("SUB", "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x20}),
-    ("SLL", "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x00}),
-    ("SLT", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x00}),
-    ("SLTU","R", {"opcode":OP_R, "funct3":0x3, "funct7":0x00}),
-    ("XOR", "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x00}),
-    ("SRL", "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x00}),
-    ("SRA", "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x20}),
-    ("OR",  "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x00}),
-    ("AND", "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x00}),
-
-    # I-type (opcode 0x13)
-    ("ADDI","I", {"opcode":OP_IMM, "funct3":0x0}),
-    ("SLTI","I", {"opcode":OP_IMM, "funct3":0x2}),
-    ("SLTIU","I",{"opcode":OP_IMM, "funct3":0x3}),
-    ("XORI","I", {"opcode":OP_IMM, "funct3":0x4}),
-    ("ORI", "I", {"opcode":OP_IMM, "funct3":0x6}),
-    ("ANDI","I", {"opcode":OP_IMM, "funct3":0x7}),
-
-    # I_SHIFTS (I-type, opcode 0x13)
-    ("SLLI", "SHIFT", {"opcode":OP_IMM, "funct3":0x1, "funct7":0x00}),    
-    ("SRLI", "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x00}),    
-    ("SRAI", "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x20}),  
-
-    # Loads (I-type, opcode 0x03)
-    ("LB",  "I", {"opcode":OP_LOAD, "funct3":0x0}),
-    ("LH",  "I", {"opcode":OP_LOAD, "funct3":0x1}),
-    ("LW",  "I", {"opcode":OP_LOAD, "funct3":0x2}),
-    ("LBU", "I", {"opcode":OP_LOAD, "funct3":0x4}),   # missing in your list
-    ("LHU", "I", {"opcode":OP_LOAD, "funct3":0x5}),   # missing in your list
-    ("LWU", "I", {"opcode":OP_LOAD, "funct3":0x6}),   # RV64 only
-    ("LD",  "I", {"opcode":OP_LOAD, "funct3":0x3}),   # RV64 only
-
-    # Stores (S-type, opcode 0x23)
-    ("SB", "S", {"opcode":OP_STORE, "funct3":0x0}),
-    ("SH", "S", {"opcode":OP_STORE, "funct3":0x1}),
-    ("SW", "S", {"opcode":OP_STORE, "funct3":0x2}),
-    ("SD", "S", {"opcode":OP_STORE, "funct3":0x3}),     # RV64 only
-
-    # Branches (B-type, opcode 0x63)
-    ("BEQ",  "B", {"opcode":OP_BRANCH, "funct3":0x0}),
-    ("BNE",  "B", {"opcode":OP_BRANCH, "funct3":0x1}),
-    ("BLT",  "B", {"opcode":OP_BRANCH, "funct3":0x4}),
-    ("BGE",  "B", {"opcode":OP_BRANCH, "funct3":0x5}),
-    ("BLTU", "B", {"opcode":OP_BRANCH, "funct3":0x6}),
-    ("BGEU", "B", {"opcode":OP_BRANCH, "funct3":0x7}),
-
-    # Jumps and upper immediates
-    ("JAL",   "J",  {"opcode":OP_JAL}),
-    ("JALR",  "I", {"opcode":OP_JALR, "funct3":0x0}),  # I-type
-    ("LUI",   "U",  {"opcode":OP_LUI}),
-    ("AUIPC", "U",  {"opcode":OP_AUIPC}),
-
-    # fences and misc
-    ("FENCE",  "FENCE", {"opcode":OP_MISC,   "funct3":0x00}),
-    ("ECALL",  "SYS",   {"opcode":OP_SYSTEM, "imm":0x00}),
-    ("EBREAK", "SYS",   {"opcode":OP_SYSTEM, "imm":0x01}),
-]
-
-M_TEMPLATES = [
-    # M_OPS (R-type, opcode 0x33)
-    ("MUL",    "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x01}),   
-    ("MULH",   "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x01}),   
-    ("MULHSU", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x01}),   
-    ("MULHU",  "R", {"opcode":OP_R, "funct3":0x3, "funct7":0x01}),   
-    ("DIV",    "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x01}),   
-    ("DIVU",   "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x01}),   
-    ("REM",    "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x01}),   
-    ("REMU",   "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x01}),     
-]
-
-AMO_TEMPLATES = [
-    # Atomic AMO
-    ("AMOSWAP.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x01}),
-    ("AMOADD.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x00}),
-    ("AMOXOR.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x04}),
-    ("AMOAND.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x0c}),
-    ("AMOOR.W",   "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x08}),
-    ("AMOMIN.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x10}),
-    ("AMOMAX.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x14}),
-    ("AMOMINU.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x18}),
-    ("AMOMAXU.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x1c}),
-]
-
-FLOATING_TEMPLATES = [
-    # Floating-point operations (F and D precision)
-    ("FADD.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x00}),
-    ("FSUB.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x08}),
-    ("FMUL.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x10}),
-    ("FDIV.S", "F", {"opcode": OP_FPU, "funct3": 0x0, "funct7": 0x18}),
-
-    ("FADD.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x00}),
-    ("FSUB.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x08}),
-    ("FMUL.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x10}),
-    ("FDIV.D", "F", {"opcode": OP_FPU, "funct3": 0x1, "funct7": 0x18}),
-    
-    # Floating-point loads (FLOAD)
-    ("FLW", "FLOAD", {"opcode": OP_LOAD_FP, "funct3": 0x2}),
-    ("FLD", "FLOAD", {"opcode": OP_LOAD_FP, "funct3": 0x3}),
-
-    # Floating-point stores (FSTORE)
-    ("FSW", "FSTORE", {"opcode": OP_STORE_FP, "funct3": 0x2}),
-    ("FSD", "FSTORE", {"opcode": OP_STORE_FP, "funct3": 0x3}),
-
-]
-
-# Minimal vector-like templates (R-type with opcode 0x57). These are simple approximations to include vector encodings.
-VECTOR_TEMPLATES = [
-    ("VADD_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x00, "funct3": 0x0}),
-    ("VSUB_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x04, "funct3": 0x0}),
-    ("VMUL_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x01, "funct3": 0x0}),
-    ("VDIV_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x02, "funct3": 0x0}),
-    ("VAND_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x07, "funct3": 0x0}),
-    ("VOR_VV",   "VR",  {"opcode": OP_VECTOR, "funct6": 0x06, "funct3": 0x0}),
-    ("VXOR_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x05, "funct3": 0x0}),
-
-    # R4-type (e.g. fused multiply-add)
-    ("VFMADD_VV",  "VR4", {"opcode": OP_FMA, "funct6": 0x00, "funct3": 0x0}),
-    ("VFNMADD_VV", "VR4", {"opcode": OP_FMA, "funct6": 0x01, "funct3": 0x0}),
-    ("VFMSUB_VV",  "VR4", {"opcode": OP_FMA, "funct6": 0x02, "funct3": 0x0}),
-    ("VFNMSUB_VV", "VR4", {"opcode": OP_FMA, "funct6": 0x03, "funct3": 0x0}),
-
-    # I-type vector instructions (shifts)
-    ("VSLL_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x08, "funct3": 0x1}),
-    ("VSRL_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x09, "funct3": 0x1}),
-    ("VSRA_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x0a, "funct3": 0x1}),
-
-    # M-type (vector mask instructions)
-    ("VMAND_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x20, "funct3": 0x7}),
-    ("VMNAND_MM",  "VM", {"opcode": OP_VECTOR, "funct6": 0x21, "funct3": 0x7}),
-    ("VMOR_MM",    "VM", {"opcode": OP_VECTOR, "funct6": 0x22, "funct3": 0x7}),
-    ("VMNOR_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x23, "funct3": 0x7}),
-    ("VMXOR_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x24, "funct3": 0x7}),
-    ("VMXNOR_MM",  "VM", {"opcode": OP_VECTOR, "funct6": 0x25, "funct3": 0x7}),
-    ("VMORNOT_MM", "VM", {"opcode": OP_VECTOR, "funct6": 0x26, "funct3": 0x7}),
-
-    ("VADD_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x01}),
-    ("VSUB_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x05}),
-    ("VMUL_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x1, "funct6":0x01}),       
-]
-
+ 
 # build instruction pool based on flags
 def build_pool(xlen, enable_m, enable_amo, enable_f, enable_vector):
     pool = []
@@ -287,20 +140,6 @@ def build_pool(xlen, enable_m, enable_amo, enable_f, enable_vector):
             pool.append(entry)
 
     return pool
-
-# Random generators producing immediates and registers then encoding:
-def pick_gpr(avoid_zero=False):
-    r = random.choice(GPRs)
-    if avoid_zero:
-        while r == 0:
-            r = random.choice(GPRs)
-    return r
-
-def pick_fpr():
-    return random.choice(FREGS)
-
-def pick_vreg():
-    return random.choice(VREGS)
 
 def emit_r_ins(entry, xlen):
     # For R entries 
@@ -347,20 +186,6 @@ def emit_shift_ins(entry, xlen):
         
     imm12 = (f7 << 5) | shamt_masked
     return encode_i(imm12, rs1, f3, rd, opcode)
-
-    # for srai, need top bits set -> encode funct7 0x20 in place: we will set funct7 in funct7_bits
-    # Note: Encoding shifts uses opcode OP_IMM with imm[11:0] containing shamt and possibly funct7 in upper bits for RV64; but we construct accordingly:
-    if op == "srai":
-        # set bit pattern for arithmetic right -> we put 0x20 in imm high area for RV32; using encode_i suffices because imm <<20 places it
-        # But to be safe, craft imm with bit 10 set as per spec for srai on RV32/64: set imm = (f7<<5) | shamt
-        imm12 = ((0x20 & 0x7f) << 5) | (shamt & 0x1f)
-        return encode_i(imm12, rs1, f3, rd, OP_IMM)
-    elif op == "srli":
-        imm12 = ((0x00 & 0x7f) << 5) | (shamt & 0x1f)
-        return encode_i(imm12, rs1, f3, rd, OP_IMM)
-    else: # slli
-        imm12 = ((0x00 & 0x7f) << 5) | (shamt & 0x1f)
-        return encode_i(imm12, rs1, f3, rd, OP_IMM)
 
 def emit_store(entry, xlen):
     # For S entries (Store)
@@ -621,7 +446,6 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
             w = emit_fp((name, instr_type, fields), xlen)
         elif instr_type == "FLOAD":
             w = emit_fload((name, instr_type, fields), xlen)
-            # todo: add FLW, FLD (FLOAD) FSW, FSD (FSTORE)
         elif instr_type == "FSTORE":
             w = emit_fstore((name, instr_type, fields), xlen)
         elif instr_type == "FENCE":
@@ -631,11 +455,11 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
         elif instr_type in ("VR", "VM"):
             w = emit_vector((name, instr_type, fields), xlen)
         elif instr_type == "VR4":
-            emit_vector_r4((name, instr_type, fields), xlen)
+            w = emit_vector_r4((name, instr_type, fields), xlen)
         elif instr_type == "VI":
-            emit_vector_i((name, instr_type, fields), xlen)
+            w = emit_vector_i((name, instr_type, fields), xlen)
         elif instr_type == "VX":
-            emit_vector_vx((name, instr_type, fields), xlen)
+            w = emit_vector_vx((name, instr_type, fields), xlen)
         else:
             w = 0x00000013  # nop (addi x0,x0,0)
         out_words.append(w & 0xffffffff)
@@ -659,12 +483,6 @@ def main():
                      enable_f=args.enable_f,
                      enable_vector=args.enable_vector,
                      seed=args.seed)
-    # write little-endian 32-bit words to stdout
-    # (use buffer write for speed)
-#    out = sys.stdout.buffer
-#    for w in words:
-#        print(f"{w:08x}")
-#        out.write(struct.pack("<I", w))
 
     print("#include <stdint.h>\n#include <stddef.h>");
     print("uint32_t fuzz_buffer[] = {")
