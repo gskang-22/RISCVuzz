@@ -86,3 +86,52 @@ V_OPS = [
     "vadd.vv", "vsub.vv", "vand.vv", "vor.vv", "vxor.vv",
     "vmul.vv", "vdiv.vv"  # vmul/vdiv are high-level placeholders (RVV real encodings differ)
 ]
+
+def build_pool(xlen, enable_m, enable_amo, enable_f, enable_vector):
+    pool = []
+    # base R types
+    for op in R_ALU.keys():
+        pool.append(("R", op))
+    for op in I_ALU.keys():
+        pool.append(("I", op))
+    # shifts
+    for op in I_SHIFTS.keys():
+        pool.append(("SHIFT", op))
+    # loads/stores
+    load_ops = ["lb","lh","lw"]
+    store_ops = ["sb","sh","sw"]
+    if xlen == 64:
+        load_ops += ["lwu","ld"]
+        store_ops += ["sd"]
+    for op in load_ops:
+        pool.append(("LOAD", op))
+    for op in store_ops:
+        pool.append(("STORE", op))
+    # branches, jal, jalr, lui, auipc
+    for op in BRANCHES.keys():
+        pool.append(("BR", op))
+    pool += [("J","jal"), ("JR","jalr"), ("U","lui"), ("U","auipc")]
+    # M extension
+    if enable_m:
+        for op in M_OPS.keys():
+            pool.append(("M", op))
+    # AMO
+    if enable_amo:
+        for name, f3, f5 in AMO_OPS:
+            pool.append(("AMO", name))
+    # Floating
+    if enable_f:
+        for op in F_OPS.keys():
+            pool.append(("F", op))
+        # simple fp loads/stores
+        if xlen==32:
+            pool += [("FLOAD","flw"), ("FSTORE","fsw")]
+        else:
+            pool += [("FLOAD","flw"), ("FSTORE","fsw"), ("FLOAD","fld"), ("FSTORE","fsd")]
+    # vector
+    if enable_vector:
+        for op in V_OPS:
+            pool.append(("V", op))
+    # fences and misc
+    pool += [("FENCE","fence"), ("SYS","ecall"), ("SYS","ebreak")]
+    return pool
