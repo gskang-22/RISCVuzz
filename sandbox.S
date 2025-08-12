@@ -76,7 +76,7 @@ xreg_init:
 	ld      t1, 48(s1)
 	ld      t2, 56(s1)
 	ld      s0, 64(s1)
-	ld      s1, 72(s1)
+#	ld      s1, 72(s1)
 	ld      a0, 80(s1) // x8 - s0/fp
 	ld      a1, 88(s1)
 	ld      a2, 96(s1)

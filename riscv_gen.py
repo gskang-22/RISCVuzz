@@ -484,12 +484,23 @@ def main():
                      enable_vector=args.enable_vector,
                      seed=args.seed)
 
-    print("#include <stdint.h>\n#include <stddef.h>");
-    print("uint32_t fuzz_buffer[] = {")
-    for w in words:
-        print(f"    0x{w:08x},")
-    print("};")
-    print("const size_t fuzz_buffer_len = sizeof(fuzz_buffer) / sizeof(uint32_t);");
+    words = generate(count=args.count,
+                     xlen=args.xlen,
+                     enable_m=args.enable_m,
+                     enable_amo=args.enable_amo,
+                     enable_f=args.enable_f,
+                     enable_vector=args.enable_vector,
+                     seed=args.seed)
+    
+    with open("output.c", "w") as f:
+        f.write("// Auto-generated instructions\n\n")
+        f.write("#include <stdint.h>\n#include <stddef.h>\n\n")
+        f.write("uint32_t fuzz_buffer2[] = {\n")
+        for w in words:
+            f.write(f"    0x{w:08x},\n")
+        f.write("};\n")
+        f.write("const size_t fuzz_buffer_len = sizeof(fuzz_buffer2) / sizeof(uint32_t);");
+
 
 if __name__ == "__main__":
     main()
