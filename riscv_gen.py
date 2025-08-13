@@ -63,9 +63,9 @@ def encode_r(funct7, rs2, rs1, funct3, rd, opcode):
             funct3_bits(funct3) | rd_bits(rd) | opcode_bits(opcode))
 
 def encode_i(imm12, rs1, funct3, rd, opcode):
-    imm = imm12 & 0xfff
-    return ( (imm << 20) | rs1_bits(rs1) | funct3_bits(funct3) |
-             rd_bits(rd) | opcode_bits(opcode) )
+    """I-type: imm[11:0] | rs1[19:15] | funct3[14:12] | rd[11:7] | opcode[6:0]"""
+    return ((imm12 & 0xFFF) << 20) | ((rs1 & 0x1F) << 15) | ((funct3 & 0x7) << 12) | ((rd & 0x1F) << 7) | (opcode & 0x7F)
+
 
 def encode_s(imm12, rs2, rs1, funct3, opcode):
     imm = imm12 & 0xfff
@@ -92,8 +92,8 @@ def encode_b(imm13, rs2, rs1, funct3, opcode):
     return encoded
 
 def encode_u(imm20, rd, opcode):
-    imm = imm20 & 0xfffff
-    return ( (imm << 12) | rd_bits(rd) | opcode_bits(opcode) )
+    """U-type: imm[31:12] | rd[11:7] | opcode[6:0]"""
+    return ((imm20 & 0xFFFFF) << 12) | ((rd & 0x1F) << 7) | (opcode & 0x7F)
 
 def encode_j(imm21, rd, opcode):
     # J-type imm[20|10:1|11|19:12]
@@ -147,6 +147,7 @@ def emit_r_ins(entry, xlen):
     opcode = fields["opcode"]
 
     enc = encode_r(f7, rs2, rs1, f3, rd, opcode)
+    # [31:25] funct7 | [24:20] rs2 | [19:15] rs1 | [14:12] funct3 | [11:7] rd | [6:0] opcode
     return enc
 
 def emit_i_ins(entry, xlen):
@@ -159,6 +160,7 @@ def emit_i_ins(entry, xlen):
     f3 = fields["funct3"]
     opcode = fields["opcode"]
 
+    # I-type format: [31:20] imm | [19:15] rs1 | [14:12] funct3 | [11:7] rd | [6:0] opcode
     return encode_i(imm, rs1, f3, rd, opcode)
 
 def emit_shift_ins(entry, xlen):
@@ -179,6 +181,7 @@ def emit_shift_ins(entry, xlen):
         shamt_masked = shamt & 0x3f
         
     imm12 = (f7 << 5) | shamt_masked
+    # [31:25] funct7 | [24:20] shamt (masked) | [19:15] rs1 | [14:12] funct3 | [11:7] rd | [6:0] opcode
     return encode_i(imm12, rs1, f3, rd, opcode)
 
 def emit_store(entry, xlen):
@@ -220,7 +223,36 @@ def emit_u(entry, xlen):
     name, instr_type, fields = entry
     opcode = fields["opcode"]
 
+    # U-type format: [31:12] imm | [11:7] rd | [6:0] opcode
     return encode_u(imm, rd, opcode)
+
+def emit_amo_ins(entry, xlen):
+    rd = pick_gpr(avoid_zero=True)
+    rs1 = pick_gpr()
+    rs2 = pick_gpr()
+
+    name, instr_type, fields = entry
+    f3 = fields["funct3"]
+    opcode = fields["opcode"]
+
+    # Randomize AQ/RL flags (bits 5 and 6 of funct7)
+    aq = random.randint(0, 1)
+    rl = random.randint(0, 1)
+
+    # Determine funct7/funct5 encoding
+    # randomizes both AQ/RL for both .W and .D AMO to max fuzzing coverage 
+    # BUT IRL AQ/RL=0 for .D AMOs
+    if "funct7" in fields:   # .W AMO
+        base = fields["funct7"] & 0x1F
+    elif "funct5" in fields: # .D AMO
+        base = fields["funct5"] & 0x1F
+    else:
+        raise ValueError(f"Invalid AMO entry: {entry}")
+    
+    # Combine AQ/RL with base funct bits
+    f7 = (rl << 6) | (aq << 5) | base
+
+    return encode_r(f7, rs2, rs1, f3, rd, opcode)
 
 def emit_fp(entry, xlen):
     # For F entries (requires FP regs)
@@ -280,6 +312,7 @@ def emit_fence(entry, xlen):
         succ = random.randint(0, 0xF)
         imm = (pred << 4) | succ
     
+    # I-type format: [31:20] imm | [19:15] rs1 | [14:12] funct3 | [11:7] rd | [6:0] opcode
     return encode_i(imm, rs1, f3, rd, OP_MISC)
 
 def emit_sys(entry, xlen):
@@ -444,9 +477,9 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
     out_words = []
     for _ in range(count):
         name, instr_type, fields = random.choice(pool)
-        if instr_type in ("R", "AMO"):
+        if instr_type == "R":
             w = emit_r_ins((name, instr_type, fields), xlen)
-        elif instr_type == "I":
+        elif instr_type == ("I", "JALR"):
             w = emit_i_ins((name, instr_type, fields), xlen)
         elif instr_type == "SHIFT":
             w = emit_shift_ins((name, instr_type, fields), xlen)
@@ -454,7 +487,7 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
             w = emit_store((name, instr_type, fields), xlen)
         elif instr_type == "B":
             w = emit_branch((name, instr_type, fields), xlen)
-        elif instr_type == "J":
+        elif instr_type == "JAL":
             w = emit_jal((name, instr_type, fields), xlen)
         elif instr_type == "U":
             w = emit_u((name, instr_type, fields), xlen)
@@ -468,6 +501,8 @@ def generate(count=200, xlen=64, enable_m=False, enable_amo=False, enable_f=Fals
             w = emit_fence((name, instr_type, fields), xlen)
         elif instr_type == "SYS":
             w = emit_sys((name, instr_type, fields), xlen)
+        elif instr_type == "AMO":
+            w = emit_amo_ins((name, instr_type, fields), xlen)
         elif instr_type in ("VR", "VM"):
             w = emit_vector((name, instr_type, fields), xlen)
         elif instr_type == "VR4":

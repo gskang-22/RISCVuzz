@@ -22,53 +22,113 @@ IMM_SPECIAL = 0.875
 FLIP_PROBABILITY = 0.5
 ENDIAN_PROBABILITY = 0.5
 
-# Opcodes (7-bit) — canonical major opcode values
-OP_R        = 0x33   # 0110011
-OP_IMM      = 0x13   # 0010011
-OP_LUI      = 0x37   # 0110111
-OP_AUIPC    = 0x17   # 0010111
-OP_JAL      = 0x6f   # 1101111
-OP_JALR     = 0x67   # 1100111
-OP_BRANCH   = 0x63   # 1100011
-OP_LOAD     = 0x03   # 0000011
-OP_STORE    = 0x23   # 0100011
-OP_MISC     = 0x0f   # 0001111 (fence)
-OP_SYSTEM   = 0x73   # 1110011
-OP_AMO      = 0x2f   # 0101111 (AMO/Atomic)
+# pseudo instructions:"la"
 
+# "vfmadd.s", "vfmsub.s", "vfnmsub.s", "vfnmadd.s", "vfmadd.d", "vfmsub.d", "vfnmsub.d", "vfnmadd.d"
+
+"vfcvt.s.d", "vfcvt.d.s", "vfcvt.s.l", "vfcvt.s.lu", "vfcvt.s.w",
+    "vfcvt.s.wu", "vfcvt.d.l", "vfcvt.d.lu", "vfcvt.d.w", "vfcvt.d.wu", "vfcvt.l.s",
+    "vfcvt.lu.s", "vfcvt.w.s", "vfcvt.wu.s", "vfcvt.l.d", "vfcvt.lu.d",
+    "vfcvt.w.d", "vfcvt.wu.d"
+"vlsb", "vlsh", "vlsw", "vlsd", "vlsbu", "vlshu", "vlswu", "vssb", "vssh", "vssw", "vssd",
+    "vlab", "vlah", "vlaw", "vlad", "vlabu", "vlahu", "vlawu", "vsab", "vsah", "vsaw", "vsad"
+"vlb", "vlh", "vlw", "vld", "vlbu", "vlhu", "vlwu", "vsb", "vsh", "vsw", "vsd",
+  "vlsegb", "vlsegh", "vlsegw", "vlsegd", "vlsegbu", "vlseghu", "vlsegwu", "vssegb", "vssegh", "vssegw", "vssegd",
+  "vlstb", "vlsth", "vlstw", "vlstd", "vlstbu", "vlsthu", "vlstwu", "vsstb", "vssth", "vsstw", "vsstd",
+  "vlsegstb", "vlsegsth", "vlsegstw", "vlsegstd", "vlsegstbu", "vlsegsthu", "vlsegstwu", "vssegstb", "vssegsth", "vssegstw", "vssegstd",
+    "vlxb", "vlxh", "vlxw", "vlxd", "vlxbu", "vlxhu", "vlxwu", "vsxb", "vsxh", "vsxw", "vsxd",
+    "vlsegxb", "vlsegxh", "vlsegxw", "vlsegxd", "vlsegxbu", "vlsegxhu", "vlsegxwu", "vssegxb", "vssegxh", "vssegxw", "vssegxd"
+"vamoadd.w", "vamoswap.w", "vamoand.w", "vamoor.w", "vamomin.w", "vamominu.w",
+    "vamomax.w", "vamomaxu.w", "vamoxor.w", "vamoadd.d", "vamoswap.d", "vamoand.d", "vamoor.d",
+    "vamomin.d", "vamominu.d", "vamomax.d", "vamomaxu.d", "vamoxor.d"
+"vsetcfg", "vstop", "vsetvl", "veidx", "vf",
+    "vmcs", "vmca", "fence"
+# vse128.v, vse1024.v
+# rvv-bench
+
+###############################################################################################
+
+# Opcodes (7-bit) — canonical major opcode values
+OP_R        = 0x33  # 0110011
+OP_IMM      = 0x13  # 0010011
+OP_LUI      = 0x37  # 0110111
+OP_AUIPC    = 0x17  # 0010111
+OP_JAL      = 0x6f  # 1101111
+OP_JALR     = 0x67  # 1100111
+OP_BRANCH   = 0x63  # 1100011
+OP_LOAD     = 0x03  # 0000011
+OP_STORE    = 0x23  # 0100011
+OP_MISC     = 0x0f  # 0001111 (fence)
+OP_SYSTEM   = 0x73  # 1110011
+OP_AMO      = 0x2f  # 0101111 (AMO/Atomic)
+
+# RV64 32-bit operations (w variants)
+OP_IMM_32   = 0x1b  # for I-type w instructions
+OP_R_32       = 0x3b  # for R-type w instructions 
+
+# Floating-point
 OP_FPU      = 0x53   # 1010011 (FP)
 OP_LOAD_FP  = 0x07   # floating-point load
 OP_STORE_FP = 0x27   # floating-point store
 
+# Vector / RVV / FMA
 OP_VECTOR   = 0x57   # 1010111 (RVV, OP-V/OPIVV space)
 OP_FMA      = 0x5b   # (fused multiply-add)
 
 # We'll implement many common mnemonics below. CSR mnemonics are intentionally omitted.
 RV32I_TEMPLATES = [
-    # R-type (opcode 0x33)
+    # is_alu
     ("ADD", "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x00}),
     ("SUB", "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x20}),
     ("SLL", "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x00}),
-    ("SLT", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x00}),
-    ("SLTU","R", {"opcode":OP_R, "funct3":0x3, "funct7":0x00}),
     ("XOR", "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x00}),
     ("SRL", "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x00}),
     ("SRA", "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x20}),
     ("OR",  "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x00}),
     ("AND", "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x00}),
 
-    # I-type (opcode 0x13)
     ("ADDI","I", {"opcode":OP_IMM, "funct3":0x0}),
-    ("SLTI","I", {"opcode":OP_IMM, "funct3":0x2}),
-    ("SLTIU","I",{"opcode":OP_IMM, "funct3":0x3}),
     ("XORI","I", {"opcode":OP_IMM, "funct3":0x4}),
     ("ORI", "I", {"opcode":OP_IMM, "funct3":0x6}),
     ("ANDI","I", {"opcode":OP_IMM, "funct3":0x7}),
 
+    ("ADDIW", "I", {"opcode": OP_IMM_32, "funct3": 0x0}),
+
+    # M_OPS (R-type, opcode 0x33)
+    ("MUL",    "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x01}),   
+    ("MULH",   "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x01}),   
+    ("MULHSU", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x01}),   
+    ("MULHU",  "R", {"opcode":OP_R, "funct3":0x3, "funct7":0x01}),   
+    ("DIV",    "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x01}),   
+    ("DIVU",   "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x01}),   
+    ("REM",    "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x01}),   
+    ("REMU",   "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x01}),    
+
     # I_SHIFTS (I-type, opcode 0x13)
-    ("SLLI", "SHIFT", {"opcode":OP_IMM, "funct3":0x1, "funct7":0x00}),    
-    ("SRLI", "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x00}),    
-    ("SRAI", "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x20}),  
+    ("SLLI",  "SHIFT", {"opcode":OP_IMM, "funct3":0x1, "funct7":0x00}),    
+    ("SRLI",  "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x00}),    
+    ("SRAI",  "SHIFT", {"opcode":OP_IMM, "funct3":0x5, "funct7":0x20}),  
+
+    ("SLLIW", "SHIFT", {"opcode": OP_IMM_32, "funct3": 0x1, "funct7": 0x00}),
+    ("SRLIW", "SHIFT", {"opcode": OP_IMM_32, "funct3": 0x5, "funct7": 0x00}),
+    ("SRAIW", "SHIFT", {"opcode": OP_IMM_32, "funct3": 0x5, "funct7": 0x20}),
+
+    ("ADDW",  "R", {"opcode": OP_R_32, "funct3": 0x0, "funct7": 0x00}),
+    ("SUBW",  "R", {"opcode": OP_R_32, "funct3": 0x0, "funct7": 0x20}),
+    ("SLLW",  "R", {"opcode": OP_R_32, "funct3": 0x1, "funct7": 0x00}),
+    ("SRLW",  "R", {"opcode": OP_R_32, "funct3": 0x5, "funct7": 0x00}),
+    ("SRAW",  "R", {"opcode": OP_R_32, "funct3": 0x5, "funct7": 0x20}),
+    ("MULW",  "R", {"opcode": OP_R_32, "funct3": 0x0, "funct7": 0x01}),
+    ("DIVW",  "R", {"opcode": OP_R_32, "funct3": 0x4, "funct7": 0x01}),
+    ("DIVUW", "R", {"opcode": OP_R_32, "funct3": 0x5, "funct7": 0x01}),
+    ("REMW",  "R", {"opcode": OP_R_32, "funct3": 0x6, "funct7": 0x01}),
+    ("REMUW", "R", {"opcode": OP_R_32, "funct3": 0x7, "funct7": 0x01}),
+
+    # is_cmp
+    ("SLTI", "I", {"opcode":OP_IMM, "funct3":0x2}),
+    ("SLTIU","I", {"opcode":OP_IMM, "funct3":0x3}),
+    ("SLT",  "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x00}),
+    ("SLTU", "R", {"opcode":OP_R, "funct3":0x3, "funct7":0x00}),  
 
     # Loads (I-type, opcode 0x03)
     ("LB",  "I", {"opcode":OP_LOAD, "funct3":0x0}),
@@ -94,8 +154,8 @@ RV32I_TEMPLATES = [
     ("BGEU", "B", {"opcode":OP_BRANCH, "funct3":0x7}),
 
     # Jumps and upper immediates
-    ("JAL",   "J",  {"opcode":OP_JAL}),
-    ("JALR",  "I", {"opcode":OP_JALR, "funct3":0x0}),  # I-type
+    ("JAL",   "JAL",  {"opcode":OP_JAL}),
+    ("JALR",  "JALR", {"opcode":OP_JALR, "funct3":0x0}),  # I-type
     ("LUI",   "U",  {"opcode":OP_LUI}),
     ("AUIPC", "U",  {"opcode":OP_AUIPC}),
 
@@ -104,19 +164,6 @@ RV32I_TEMPLATES = [
     ("ECALL",  "SYS",   {"opcode":OP_SYSTEM, "imm":0x00}),
     ("EBREAK", "SYS",   {"opcode":OP_SYSTEM, "imm":0x01}),
 ]
-
-M_TEMPLATES = [
-    # M_OPS (R-type, opcode 0x33)
-    ("MUL",    "R", {"opcode":OP_R, "funct3":0x0, "funct7":0x01}),   
-    ("MULH",   "R", {"opcode":OP_R, "funct3":0x1, "funct7":0x01}),   
-    ("MULHSU", "R", {"opcode":OP_R, "funct3":0x2, "funct7":0x01}),   
-    ("MULHU",  "R", {"opcode":OP_R, "funct3":0x3, "funct7":0x01}),   
-    ("DIV",    "R", {"opcode":OP_R, "funct3":0x4, "funct7":0x01}),   
-    ("DIVU",   "R", {"opcode":OP_R, "funct3":0x5, "funct7":0x01}),   
-    ("REM",    "R", {"opcode":OP_R, "funct3":0x6, "funct7":0x01}),   
-    ("REMU",   "R", {"opcode":OP_R, "funct3":0x7, "funct7":0x01}),     
-]
-
 AMO_TEMPLATES = [
     # Atomic AMO (opcode 0x2f)
     ("AMOSWAP.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x01}),
@@ -128,6 +175,17 @@ AMO_TEMPLATES = [
     ("AMOMAX.W",  "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x14}),
     ("AMOMINU.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x18}),
     ("AMOMAXU.W", "AMO", {"opcode": OP_AMO, "funct3":0x2,  "funct7":0x1c}),
+
+    # RV64 only 
+    ("AMOADD.D",  "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x00}),
+    ("AMOSWAP.D", "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x01}),
+    ("AMOXOR.D",  "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x04}),
+    ("AMOAND.D",  "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x0C}),
+    ("AMOOR.D",   "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x08}),
+    ("AMOMIN.D",  "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x10}),
+    ("AMOMAX.D",  "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x14}),
+    ("AMOMINU.D", "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x18}),
+    ("AMOMAXU.D", "AMO", {"opcode": OP_AMO, "funct3": 0x3, "funct5": 0x1C}),
 ]
 
 FLOATING_TEMPLATES = [
@@ -145,10 +203,25 @@ FLOATING_TEMPLATES = [
     # Floating-point loads (FLOAD) (opcode 0x07)
     ("FLW", "FLOAD", {"opcode": OP_LOAD_FP, "funct3": 0x2}),
     ("FLD", "FLOAD", {"opcode": OP_LOAD_FP, "funct3": 0x3}),
-
     # Floating-point stores (FSTORE) (opcode 0x27)
     ("FSW", "FSTORE", {"opcode": OP_STORE_FP, "funct3": 0x2}),
     ("FSD", "FSTORE", {"opcode": OP_STORE_FP, "funct3": 0x3}),
+
+    ("FSQRT.S",  "R", {"opcode": OP_FPU, "funct7": 0x2A, "funct3":0x00}),
+    ("FMIN.S",   "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x01}),
+    ("FMAX.S",   "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x01}),
+    ("FSGNJ.S",  "R", {"opcode": OP_FPU, "funct7": 0x00, "funct3":0x00}),
+    ("FSGNJN.S", "R", {"opcode": OP_FPU, "funct7": 0x00, "funct3":0x01}),
+    ("FSGNJX.S", "R", {"opcode": OP_FPU, "funct7": 0x00, "funct3":0x02}),
+
+    # Double-precision
+    ("FSQRT.D",  "R", {"opcode": OP_FPU, "funct7": 0x2B, "funct3":0x00}),
+    ("FMIN.D",   "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x01}),
+    ("FMAX.D",   "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x01}),
+    ("FSGNJ.D",  "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x00}),
+    ("FSGNJN.D", "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x01}),
+    ("FSGNJX.D", "R", {"opcode": OP_FPU, "funct7": 0x01, "funct3":0x02}),
+
 ]
 
 # Minimal vector-like templates (R-type with opcode 0x57). These are simple approximations to include vector encodings.
