@@ -9,7 +9,7 @@
 import { BASE, ISA } from './Constants.js';
 import { configDefault } from './Config.js';
 
-// import { Decoder, decRegAbi } from './Decoder.js';
+import { Decoder, decRegAbi } from './Decoder.js';
 import { Encoder } from './Encoder.js';
 
 /**
@@ -121,22 +121,22 @@ export class Instruction {
     this.hex = convertBase(this.bin, BASE.bin, BASE.hex, hexLength);
   }
 
-  // // Decode instruction from binary to assembly
-  // #decodeAsm() {
-  //   // Create a Decoder for the instruction
-  //   let decoder = new Decoder(this.bin, this.#config, this.#xlens);
+  // Decode instruction from binary to assembly
+  #decodeAsm() {
+    // Create a Decoder for the instruction
+    let decoder = new Decoder(this.bin, this.#config, this.#xlens);
 
-  //   // Get assembly representation
-  //   this.asm = decoder.asm;
-  //   this.name = decoder.asm.split(" ")[0]
+    // Get assembly representation
+    this.asm = decoder.asm;
+    this.name = decoder.asm.split(" ")[0]
 
-  //   // Get fragments
-  //   this.asmFrags = decoder.asmFrags;
-  //   this.binFrags = decoder.binFrags;
+    // Get fragments
+    this.asmFrags = decoder.asmFrags;
+    this.binFrags = decoder.binFrags;
 
-  //   // Get instruction characteristics
-  //   this.fmt = decoder.fmt;
-  //   this.isa = decoder.isa;
+    // Get instruction characteristics
+    this.fmt = decoder.fmt;
+    this.isa = decoder.isa;
   }
 
   // Encode instruction from assembly to binary
