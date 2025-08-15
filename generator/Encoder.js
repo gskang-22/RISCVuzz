@@ -117,40 +117,41 @@ export class Encoder {
 
     // Encode instruction
     if (cInst) {
-      // 16-bit C instructions
-      //   Encode according to instruction format
-      const fmt = /^([^-]+)-/.exec(this.inst.fmt)?.[1];
-      switch (fmt) {
-        case 'CR':
-          this.encodeCR();
-          break;
-        case 'CI':
-          this.encodeCI();
-          break;
-        case 'CSS':
-          this.encodeCSS();
-          break;
-        case 'CIW':
-          this.encodeCIW();
-          break;
-        case 'CL':
-          this.encodeCL();
-          break;
-        case 'CS':
-          this.encodeCS();
-          break;
-        case 'CA':
-          this.encodeCA();
-          break;
-        case 'CB':
-          this.encodeCB();
-          break;
-        case 'CJ':
-          this.encodeCJ();
-          break;
-        default:
-          throw `Unsupported C instruction format: ${this.inst.fmt}`;
-      }
+      throw 'Compressed instructions (C extension) has been removed'
+      // // 16-bit C instructions
+      // //   Encode according to instruction format
+      // const fmt = /^([^-]+)-/.exec(this.inst.fmt)?.[1];
+      // switch (fmt) {
+      //   case 'CR':
+      //     this.encodeCR();
+      //     break;
+      //   case 'CI':
+      //     this.encodeCI();
+      //     break;
+      //   case 'CSS':
+      //     this.encodeCSS();
+      //     break;
+      //   case 'CIW':
+      //     this.encodeCIW();
+      //     break;
+      //   case 'CL':
+      //     this.encodeCL();
+      //     break;
+      //   case 'CS':
+      //     this.encodeCS();
+      //     break;
+      //   case 'CA':
+      //     this.encodeCA();
+      //     break;
+      //   case 'CB':
+      //     this.encodeCB();
+      //     break;
+      //   case 'CJ':
+      //     this.encodeCJ();
+      //     break;
+      //   default:
+      //     throw `Unsupported C instruction format: ${this.inst.fmt}`;
+      // }
     } else {
       // Standard 32-bit instructions
       //   Encode according to opcode
@@ -317,7 +318,7 @@ export class Encoder {
 
     // Convert to binary representation
     const rd = encReg(dest), rs1 = encReg(base),
-      imm = encImm(offset, FIELDS.i_imm_11_0.pos[1]);
+      imm = encImm(offset, FIELDS.i_imm_11_0.pos[1], true);
 
     // Construct binary instruction
     this.bin = imm + rs1 + this.inst.funct3 + rd + this.inst.opcode;
@@ -334,7 +335,7 @@ export class Encoder {
     const floatInst = this.inst.opcode === OPCODE.LOAD_FP;
     const rd = encReg(dest, floatInst),
       rs1 = encReg(base),
-      imm = encImm(offset, FIELDS.i_imm_11_0.pos[1]);
+      imm = encImm(offset, FIELDS.i_imm_11_0.pos[1], true);
 
     // Construct binary instruction
     this.bin = imm + rs1 + this.inst.funct3 + rd + this.inst.opcode;
@@ -376,7 +377,7 @@ export class Encoder {
 
     } else {
       // Non-shift instructions
-      imm = encImm(immediate, FIELDS.i_imm_11_0.pos[1]);
+      imm = encImm(immediate, FIELDS.i_imm_11_0.pos[1], true);
     }
 
     // Construct binary instruction
@@ -395,13 +396,13 @@ export class Encoder {
     // Signals when MISC-MEM used as extended encoding space for load operations
     const loadExt = this.mne === 'lq';
 
-    if (loadExt) {
+    if (loadExt) { // if instruction starts with lq 
       // Get operands
       const dest = this.opr[0], offset = this.opr[1], base = this.opr[2];
 
       // Convert to binary representation
       rd = encReg(dest);
-      imm = encImm(offset, FIELDS.i_imm_11_0.pos[1]);
+      imm = encImm(offset, FIELDS.i_imm_11_0.pos[1], true);
       rs1 = encReg(base);
 
     } else if (this.mne === 'fence') {
@@ -427,18 +428,19 @@ export class Encoder {
 
     // Zicsr Instructions
     if (this.inst.isa == 'Zicsr') {
-      // Get operands
-      const dest = this.opr[0], csr = this.opr[1], src = this.opr[2];
+      // // Get operands
+      // const dest = this.opr[0], csr = this.opr[1], src = this.opr[2];
 
-      // Convert to binary representation
-      rd = encReg(dest);
-      imm = encCSR(csr);
+      // // Convert to binary representation
+      // rd = encReg(dest);
+      // imm = encCSR(csr);
 
-      // Convert src to register or immediate
-      //   based off high bit of funct3 (0:reg, 1:imm)
-      rs1 = (this.inst.funct3[0] === '0')
-        ? encReg(src)
-        : encImm(src, FIELDS.rs1.pos[1]);
+      // // Convert src to register or immediate
+      // //   based off high bit of funct3 (0:reg, 1:imm)
+      // rs1 = (this.inst.funct3[0] === '0')
+      //   ? encReg(src)
+      //   : encImm(src, FIELDS.rs1.pos[1]);
+      throw 'CSR Instructions have been removed'
 
     } else {
       // Trap instructions
@@ -466,7 +468,7 @@ export class Encoder {
     const floatInst = this.inst.opcode === OPCODE.STORE_FP;
     const rs2 = encReg(src, floatInst),
       rs1 = encReg(base),
-      imm = encImm(offset, len_11_5 + len_4_0),
+      imm = encImm(offset, len_11_5 + len_4_0, true),
       imm_11_5 = imm.substring(0, len_11_5),
       imm_4_0 = imm.substring(len_11_5, len_11_5 + len_4_0);
 
@@ -490,7 +492,7 @@ export class Encoder {
 
     // Convert to binary representation
     const rs1 = encReg(src1), rs2 = encReg(src2),
-      imm = encImm(offset, len_12 + len_11 + len_10_5 + len_4_1 + 1);
+      imm = encImm(offset, len_12 + len_11 + len_10_5 + len_4_1 + 1, true);
 
     const imm_12 = imm.substring(0, len_12),
       imm_11 = imm.substring(len_12, len_12 + len_11),
@@ -513,7 +515,7 @@ export class Encoder {
     // Convert to binary representation
     const rd = encReg(dest);
     // Construct immediate field
-    const imm_31_12 = encImm(immediate, FIELDS.u_imm_31_12.pos[1]);
+    const imm_31_12 = encImm(immediate, FIELDS.u_imm_31_12.pos[1], true);
 
     // Construct binary instruction
     this.bin = imm_31_12 + rd + this.inst.opcode;
@@ -535,7 +537,7 @@ export class Encoder {
 
     // Convert to binary representation
     const rd = encReg(dest),
-      imm = encImm(offset, len_20 + len_19_12 + len_11 + len_10_1 + 1);
+      imm = encImm(offset, len_20 + len_19_12 + len_11 + len_10_1 + 1, true);
 
     const imm_20 = imm.substring(0, len_20),
       imm_19_12 = imm.substring(len_20, len_20 + len_19_12),
@@ -594,295 +596,309 @@ export class Encoder {
       this.inst.opcode;
   }
 
-  /**
-   * Encodes CR-type instruction
-   */
-  encodeCR() {
-    // Get operands
-    const destSrc1 = this.opr[0], src2 = this.opr[1];
+  // /**
+  //  * Encodes CR-type instruction
+  //  */
+  // encodeCR() {
+  //   // Get operands
+  //   const destSrc1 = this.opr[0], src2 = this.opr[1];
 
-    // Encode registers, but overwite with static values if present
-    const rdRs1 = this.inst.rdRs1Val !== undefined
-      ? encImm(this.inst.rdRs1Val, FIELDS.c_rd_rs1.pos[1])
-      : (destSrc1 === undefined ? '01000' : encReg(destSrc1));
-    const rs2 = this.inst.rs2Val !== undefined
-      ? encImm(this.inst.rs2Val, FIELDS.c_rs2.pos[1])
-      : (src2 === undefined ? '01000' : encReg(src2));
+  //   // Encode registers, but overwite with static values if present
+  //   const rdRs1 = this.inst.rdRs1Val !== undefined
+  //     ? encImm(this.inst.rdRs1Val, FIELDS.c_rd_rs1.pos[1])
+  //     : (destSrc1 === undefined ? '01000' : encReg(destSrc1));
+  //   const rs2 = this.inst.rs2Val !== undefined
+  //     ? encImm(this.inst.rs2Val, FIELDS.c_rs2.pos[1])
+  //     : (src2 === undefined ? '01000' : encReg(src2));
 
-    // Validate operands
-    if (this.inst.rdRs1Excl !== undefined) {
-      const val = parseInt(rdRs1, BASE.bin);
-      for (const excl of this.inst.rdRs1Excl) {
-        if (val === excl) {
-          throw `Illegal value "${destSrc1}" in rd/rs1 field for instruction ${this.mne}`;
-        }
-      }
-    }
-    if (this.inst.rs2Excl !== undefined) {
-      const val = parseInt(rs2, BASE.bin);
-      for (const excl of this.inst.rs2Excl) {
-        if (val === excl) {
-          throw `Illegal value "${src2}" in rs2 field for instruction ${this.mne}`;
-        }
-      }
-    }
+  //   // Validate operands
+  //   if (this.inst.rdRs1Excl !== undefined) {
+  //     const val = parseInt(rdRs1, BASE.bin);
+  //     for (const excl of this.inst.rdRs1Excl) {
+  //       if (val === excl) {
+  //         throw `Illegal value "${destSrc1}" in rd/rs1 field for instruction ${this.mne}`;
+  //       }
+  //     }
+  //   }
+  //   if (this.inst.rs2Excl !== undefined) {
+  //     const val = parseInt(rs2, BASE.bin);
+  //     for (const excl of this.inst.rs2Excl) {
+  //       if (val === excl) {
+  //         throw `Illegal value "${src2}" in rs2 field for instruction ${this.mne}`;
+  //       }
+  //     }
+  //   }
 
-    // Construct binary instruction
-    this.bin = this.inst.funct4 + rdRs1 + rs2 + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct4 + rdRs1 + rs2 + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CI-type instruction
-   */
-  encodeCI() {
-    // Determine operand order
-    const skipRdRs1 = this.inst.rdRs1Val !== undefined;
+  // /**
+  //  * Encodes CI-type instruction
+  //  */
+  // encodeCI() {
+  //   // Determine operand order
+  //   const skipRdRs1 = this.inst.rdRs1Val !== undefined;
 
-    // Get operands
-    const destSrc1 = this.opr[0];
-    const immediate = this.opr[skipRdRs1 ? 0 : 1];
+  //   // Get operands
+  //   const destSrc1 = this.opr[0];
+  //   const immediate = this.opr[skipRdRs1 ? 0 : 1];
 
-    // Determine if rdRs1 should be float register from mnemonic
-    const floatRdRs1 = /^c\.f/.test(this.mne);
+  //   // Determine if rdRs1 should be float register from mnemonic
+  //   const floatRdRs1 = /^c\.f/.test(this.mne);
 
-    // Encode operands, but overwite with static values if present
-    const rdRs1 = skipRdRs1
-      ? encImm(this.inst.rdRs1Val, FIELDS.c_rd_rs1.pos[1])
-      : (destSrc1 === undefined ? '01000' : encReg(destSrc1, floatRdRs1));
-    let immVal = this.inst.immVal ?? Number(immediate);
+  //   // Encode operands, but overwite with static values if present
+  //   const rdRs1 = skipRdRs1
+  //     ? encImm(this.inst.rdRs1Val, FIELDS.c_rd_rs1.pos[1])
+  //     : (destSrc1 === undefined ? '01000' : encReg(destSrc1, floatRdRs1));
+  //   let immVal = this.inst.immVal ?? Number(immediate);
 
-    // Validate operands
-    if (this.inst.rdRs1Excl !== undefined) {
-      const val = parseInt(rdRs1, BASE.bin);
-      for (const excl of this.inst.rdRs1Excl) {
-        if (val === excl) {
-          throw `Illegal value "${destSrc1}" in rd/rs1 field for instruction ${this.mne}`;
-        }
-      }
-    }
-    if (this.inst.nzimm && (immVal === 0 || isNaN(immVal))) {
-      // If missing immediate, generate lowest non-zero immediate value
-      if (immediate === undefined) {
-        immVal = minImmFromBits(this.inst.immBits);
-      } else {
-        throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-zero value`;
-      }
-    }
-    if (this.inst.uimm && immVal < 0) {
-      throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
-    }
+  //   // Validate operands
+  //   if (this.inst.rdRs1Excl !== undefined) {
+  //     const val = parseInt(rdRs1, BASE.bin);
+  //     for (const excl of this.inst.rdRs1Excl) {
+  //       if (val === excl) {
+  //         throw `Illegal value "${destSrc1}" in rd/rs1 field for instruction ${this.mne}`;
+  //       }
+  //     }
+  //   }
+  //   if (this.inst.nzimm && (immVal === 0 || isNaN(immVal))) {
+  //     // If missing immediate, generate lowest non-zero immediate value
+  //     if (immediate === undefined) {
+  //       immVal = minImmFromBits(this.inst.immBits);
+  //     } else {
+  //       throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-zero value`;
+  //     }
+  //   }
+  //   if (this.inst.uimm && immVal < 0) {
+  //     throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
+  //   }
 
-    // Construct immediate fields
-    const imm0 = encImmBits(immVal, this.inst.immBits[0]);
-    const imm1 = encImmBits(immVal, this.inst.immBits[1]);
+  //   // Construct immediate fields
+  //   const imm0 = encImmBits(immVal, this.inst.immBits[0]);
+  //   const imm1 = encImmBits(immVal, this.inst.immBits[1]);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + imm0 + rdRs1 + imm1 + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + imm0 + rdRs1 + imm1 + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CSS-type instruction
-   */
-  encodeCSS() {
-    // Get operands
-    const src = this.opr[0], offset = this.opr[1];
+  // /**
+  //  * Encodes CSS-type instruction
+  //  */
+  // encodeCSS() {
+  //   // Get operands
+  //   const src = this.opr[0], offset = this.opr[1];
 
-    // Determine if rs2 should be float register from mnemonic
-    const floatRs2 = /^c\.f/.test(this.mne);
+  //   // Determine if rs2 should be float register from mnemonic
+  //   const floatRs2 = /^c\.f/.test(this.mne);
 
-    // Encode operands and parse immediate for validation
-    const rs2 = encReg(src, floatRs2);
-    let immVal = Number(offset);
+  //   // Encode operands and parse immediate for validation
+  //   const rs2 = encReg(src, floatRs2);
+  //   let immVal = Number(offset);
 
-    // Validate operands
-    if (this.inst.uimm && immVal < 0) {
-      throw `Invalid immediate "${offset}", ${this.mne} instruction expects non-negative value`;
-    }
+  //   // Validate operands
+  //   if (this.inst.uimm && immVal < 0) {
+  //     throw `Invalid immediate "${offset}", ${this.mne} instruction expects non-negative value`;
+  //   }
 
-    // Construct immediate field
-    const imm = encImmBits(immVal, this.inst.immBits);
+  //   // Construct immediate field
+  //   const imm = encImmBits(immVal, this.inst.immBits);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + imm + rs2 + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + imm + rs2 + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CIW-type instruction
-   */
-  encodeCIW() {
-    // Get operands
-    const dest = this.opr[0], immediate = this.opr[1];
+  // /**
+  //  * Encodes CIW-type instruction
+  //  */
+  // encodeCIW() {
+  //   // Get operands
+  //   const dest = this.opr[0], immediate = this.opr[1];
 
-    // Encode operands and parse immediate for validation
-    const rdPrime = encRegPrime(dest);
-    let immVal = Number(immediate);
+  //   // Encode operands and parse immediate for validation
+  //   const rdPrime = encRegPrime(dest);
+  //   let immVal = Number(immediate);
 
-    // Validate operands
-    if (this.inst.nzimm && (immVal === 0 || isNaN(immVal))) {
-      // If missing immediate, generate lowest non-zero immediate value
-      if (immediate === undefined) {
-        immVal = minImmFromBits(this.inst.immBits);
-      } else {
-        throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-zero value`;
-      }
-    }
-    if (this.inst.uimm && immVal < 0) {
-      throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
-    }
+  //   // Validate operands
+  //   if (this.inst.nzimm && (immVal === 0 || isNaN(immVal))) {
+  //     // If missing immediate, generate lowest non-zero immediate value
+  //     if (immediate === undefined) {
+  //       immVal = minImmFromBits(this.inst.immBits);
+  //     } else {
+  //       throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-zero value`;
+  //     }
+  //   }
+  //   if (this.inst.uimm && immVal < 0) {
+  //     throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
+  //   }
 
-    // Construct immediate field
-    const imm = encImmBits(immVal, this.inst.immBits);
+  //   // Construct immediate field
+  //   const imm = encImmBits(immVal, this.inst.immBits);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + imm + rdPrime + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + imm + rdPrime + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CL-type instruction
-   */
-  encodeCL() {
-    // Get operands
-    const dest = this.opr[0], offset = this.opr[1], base = this.opr[2];
+  // /**
+  //  * Encodes CL-type instruction
+  //  */
+  // encodeCL() {
+  //   // Get operands
+  //   const dest = this.opr[0], offset = this.opr[1], base = this.opr[2];
 
-    // Determine if rd' should be float register from mnemonic
-    const floatRd = /^c\.f/.test(this.mne);
+  //   // Determine if rd' should be float register from mnemonic
+  //   const floatRd = /^c\.f/.test(this.mne);
 
-    // Encode operands and parse immediate for validation
-    const rdPrime = encRegPrime(dest, floatRd);
-    const rs1Prime = encRegPrime(base);
-    let immVal = Number(offset);
+  //   // Encode operands and parse immediate for validation
+  //   const rdPrime = encRegPrime(dest, floatRd);
+  //   const rs1Prime = encRegPrime(base);
+  //   let immVal = Number(offset);
 
-    // Validate operands
-    if (this.inst.uimm && immVal < 0) {
-      throw `Invalid immediate "${offset}", ${this.mne} instruction expects non-negative value`;
-    }
+  //   // Validate operands
+  //   if (this.inst.uimm && immVal < 0) {
+  //     throw `Invalid immediate "${offset}", ${this.mne} instruction expects non-negative value`;
+  //   }
 
-    // Construct immediate fields
-    const imm0 = encImmBits(immVal, this.inst.immBits[0]);
-    const imm1 = encImmBits(immVal, this.inst.immBits[1]);
+  //   // Construct immediate fields
+  //   const imm0 = encImmBits(immVal, this.inst.immBits[0]);
+  //   const imm1 = encImmBits(immVal, this.inst.immBits[1]);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + imm0 + rs1Prime + imm1 + rdPrime + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + imm0 + rs1Prime + imm1 + rdPrime + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CS-type instruction
-   */
-  encodeCS() {
-    // Get operands
-    const src = this.opr[0], immediate = this.opr[1], base = this.opr[2];
+  // /**
+  //  * Encodes CS-type instruction
+  //  */
+  // encodeCS() {
+  //   // Get operands
+  //   const src = this.opr[0], immediate = this.opr[1], base = this.opr[2];
 
-    // Determine if rd' should be float register from mnemonic
-    const floatRs2 = /^c\.f/.test(this.mne);
+  //   // Determine if rd' should be float register from mnemonic
+  //   const floatRs2 = /^c\.f/.test(this.mne);
 
-    // Encode operands and parse immediate for validation
-    const rs2Prime = encRegPrime(src, floatRs2);
-    const rs1Prime = encRegPrime(base);
-    let immVal = Number(immediate);
+  //   // Encode operands and parse immediate for validation
+  //   const rs2Prime = encRegPrime(src, floatRs2);
+  //   const rs1Prime = encRegPrime(base);
+  //   let immVal = Number(immediate);
 
-    // Validate operands
-    if (this.inst.uimm && immVal < 0) {
-      throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
-    }
+  //   // Validate operands
+  //   if (this.inst.uimm && immVal < 0) {
+  //     throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
+  //   }
 
-    // Construct immediate fields
-    const imm0 = encImmBits(immVal, this.inst.immBits[0]);
-    const imm1 = encImmBits(immVal, this.inst.immBits[1]);
+  //   // Construct immediate fields
+  //   const imm0 = encImmBits(immVal, this.inst.immBits[0]);
+  //   const imm1 = encImmBits(immVal, this.inst.immBits[1]);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + imm0 + rs1Prime + imm1 + rs2Prime + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + imm0 + rs1Prime + imm1 + rs2Prime + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CA-type instruction
-   */
-  encodeCA() {
-    // Get operands
-    const destSrc1 = this.opr[0], src2 = this.opr[1];
+  // /**
+  //  * Encodes CA-type instruction
+  //  */
+  // encodeCA() {
+  //   // Get operands
+  //   const destSrc1 = this.opr[0], src2 = this.opr[1];
 
-    // Encode operands and parse immediate for validation
-    const rdRs1Prime = encRegPrime(destSrc1);
-    const rs2Prime = encRegPrime(src2);
+  //   // Encode operands and parse immediate for validation
+  //   const rdRs1Prime = encRegPrime(destSrc1);
+  //   const rs2Prime = encRegPrime(src2);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct6 + rdRs1Prime + this.inst.funct2 + rs2Prime + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct6 + rdRs1Prime + this.inst.funct2 + rs2Prime + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CB-type instruction
-   */
-  encodeCB() {
-    // Get operands
-    const destSrc1 = this.opr[0], immediate = this.opr[1];
+  // /**
+  //  * Encodes CB-type instruction
+  //  */
+  // encodeCB() {
+  //   // Get operands
+  //   const destSrc1 = this.opr[0], immediate = this.opr[1];
 
-    // Encode operands, but overwite with static values if present
-    const rdRs1Prime = encRegPrime(destSrc1);
-    let immVal = this.inst.immVal ?? Number(immediate);
+  //   // Encode operands, but overwite with static values if present
+  //   const rdRs1Prime = encRegPrime(destSrc1);
+  //   let immVal = this.inst.immVal ?? Number(immediate);
 
-    // Validate operands
-    if (this.inst.nzimm && (immVal === 0 || isNaN(immVal))) {
-      // If missing immediate, generate lowest non-zero immediate value
-      if (immediate === undefined) {
-        immVal = minImmFromBits(this.inst.immBits);
-      } else {
-        throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-zero value`;
-      }
-    }
-    if (this.inst.uimm && immVal < 0) {
-      throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
-    }
+  //   // Validate operands
+  //   if (this.inst.nzimm && (immVal === 0 || isNaN(immVal))) {
+  //     // If missing immediate, generate lowest non-zero immediate value
+  //     if (immediate === undefined) {
+  //       immVal = minImmFromBits(this.inst.immBits);
+  //     } else {
+  //       throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-zero value`;
+  //     }
+  //   }
+  //   if (this.inst.uimm && immVal < 0) {
+  //     throw `Invalid immediate "${immediate}", ${this.mne} instruction expects non-negative value`;
+  //   }
 
-    // Construct immediate fields
-    const imm0 = encImmBits(immVal, this.inst.immBits[0]);
-    const imm1 = encImmBits(immVal, this.inst.immBits[1]);
+  //   // Construct immediate fields
+  //   const imm0 = encImmBits(immVal, this.inst.immBits[0]);
+  //   const imm1 = encImmBits(immVal, this.inst.immBits[1]);
 
-    // Conditionally construct funct2 field, if present
-    const funct2 = this.inst.funct2 ?? '';
+  //   // Conditionally construct funct2 field, if present
+  //   const funct2 = this.inst.funct2 ?? '';
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + imm0 + funct2 + rdRs1Prime + imm1 + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + imm0 + funct2 + rdRs1Prime + imm1 + this.inst.opcode;
+  // }
 
-  /**
-   * Encodes CJ-type instruction
-   */
-  encodeCJ() {
-    // Get operands
-    const immediate = this.opr[0];
+  // /**
+  //  * Encodes CJ-type instruction
+  //  */
+  // encodeCJ() {
+  //   // Get operands
+  //   const immediate = this.opr[0];
 
-    // Construct immediate fields
-    const jumpTarget = encImmBits(immediate, this.inst.immBits);
+  //   // Construct immediate fields
+  //   const jumpTarget = encImmBits(immediate, this.inst.immBits);
 
-    // Construct binary instruction
-    this.bin = this.inst.funct3 + jumpTarget + this.inst.opcode;
-  }
+  //   // Construct binary instruction
+  //   this.bin = this.inst.funct3 + jumpTarget + this.inst.opcode;
+  // }
 }
 
-// Parse given immediate to binary
-function encImm(immediate, len) {
-  let bin = (Number(immediate) >>> 0).toString(BASE.bin);
-  // Extend or reduce binary representation to `len` bits
-  return bin.padStart(len, '0').slice(-len);
-}
-
-// Encode immediate value using the given immBits configuration
-function encImmBits(immediate, immBits) {
-  // Full length is 18 as no C instruction immediate will be longer
-  const len = 18;
-  let binFull = encImm(immediate, len);
-  let bin = '';
-  for (let b of immBits) {
-    // Detect singular bit vs bit span
-    if (typeof b === 'number') {
-      bin += binFull[len - 1 - b];
-    } else {
-      bin += binFull.substring(len - 1 - b[0], len - b[1]);
-    }
+function encImm(immediate, len, signed = false) {
+  let bin;
+  
+  if (immediate === undefined) {
+    // No immediate provided → random generation
+    bin = signed ? rand_simm(len) : rand_uimm(len);
+  } else {
+    // Parse the given immediate into binary
+    bin = (Number(immediate) >>> 0).toString(2)
+                                   .padStart(len, '0')
+                                   .slice(-len);
   }
   return bin;
 }
+// // Parse given immediate to binary
+// function encImm(immediate, len) {
+//   let bin = (Number(immediate) >>> 0).toString(BASE.bin);
+//   // Extend or reduce binary representation to `len` bits
+//   return bin.padStart(len, '0').slice(-len);
+// }
 
-// Get the lowest possible non-zero value from an immBits configuration
+// // Encode immediate value using the given immBits configuration
+// function encImmBits(immediate, immBits) {
+//   // Full length is 18 as no C instruction immediate will be longer
+//   const len = 18;
+//   let binFull = encImm(immediate, len);
+//   let bin = '';
+//   for (let b of immBits) {
+//     // Detect singular bit vs bit span
+//     if (typeof b === 'number') {
+//       bin += binFull[len - 1 - b];
+//     } else {
+//       bin += binFull.substring(len - 1 - b[0], len - b[1]);
+//     }
+//   }
+//   return bin;
+// }
+
+// // Get the lowest possible non-zero value from an immBits configuration
 // function minImmFromBits(immBits) {
 //   // Local recursive function for finding mininum value from arbitrarily nested arrays
 //   function deepMin(numOrArr) {
@@ -898,33 +914,6 @@ function encImmBits(immediate, immBits) {
 //   return Number('0b1' + ''.padStart(deepMin(immBits), '0'));
 // }
 
-  // function minImmFromBits(immBits) {
-  //   // Recursive function to find minimum bit position
-  //   function deepMin(numOrArr) {
-  //     if (typeof numOrArr === 'number') return numOrArr;
-  //     return Math.min(...numOrArr.map(deepMin));
-  //   }
-
-  //   // Recursive function to find maximum bit position
-  //   function deepMax(numOrArr) {
-  //     if (typeof numOrArr === 'number') return numOrArr;
-  //     return Math.max(...numOrArr.map(deepMax));
-  //   }
-
-  //   const minBit = deepMin(immBits);
-  //   const maxBit = deepMax(immBits);
-  //   const nBits = maxBit - minBit + 1; // width of immediate field
-
-  //   if (nBits <= 0) return 1; // fallback
-
-  //   const maxVal = (1 << nBits) - 1;
-  //   return Math.floor(Math.random() * maxVal) + 1; // random value 1..maxVal
-  // }
-
-
-
-
-
 // Convert register numbers to binary
 function encReg(reg, floatReg=false) {
   // Attempt to convert from ABI name to x<num> or f<num>, depending on `floatReg`
@@ -933,7 +922,7 @@ function encReg(reg, floatReg=false) {
   let regFile = floatReg ? 'f' : 'x';
   if (reg === undefined || reg.length === 0) {
     // Missing operand, helpfully return 'x0' or 'f0' by default
-    const rd  = pick_gpr()
+    const rd = floatReg ? pick_fpr() : pick_gpr();
     return rd;
   } else if (reg[0] !== regFile || !(/^[fx]\d+/.test(reg))) {
     throw `Invalid or unknown ${floatReg ? 'float ' : ''}register format: "${reg}"`;
@@ -948,31 +937,40 @@ function encReg(reg, floatReg=false) {
   return convertBase(dec, BASE.dec, BASE.bin, 5);
 }
 
-// Convert compressed register numbers to binary
-function encRegPrime(reg, floatReg=false) {
-  // Missing operand, use x8 or f8
-  if (reg === undefined) {
-    return '000';
-  }
+// // Convert compressed register numbers to binary
+// function encRegPrime(reg, floatReg=false) {
+//   // Missing operand, use x8 or f8
+//   if (reg === undefined) {
+//     return '000';
+//   }
 
-  // Encode register
-  const encoded = encReg(reg, floatReg);
-  // Make sure that compressed register belongs to x8-x15/f8-15 range
-  // - Full 5-bit encoded register should conform to '01xxx', use the 'xxx' in the encoded instruction
-  if (encoded.substring(0, 2) !== '01') {
-    const regFile = floatReg ? 'f' : 'x';
-    throw `Invalid register "${reg}", rd' field expects compressable register from ${regFile}8 to ${regFile}15`;
-  }
-  return encoded.substring(2);
-}
+//   // Encode register
+//   const encoded = encReg(reg, floatReg);
+//   // Make sure that compressed register belongs to x8-x15/f8-15 range
+//   // - Full 5-bit encoded register should conform to '01xxx', use the 'xxx' in the encoded instruction
+//   if (encoded.substring(0, 2) !== '01') {
+//     const regFile = floatReg ? 'f' : 'x';
+//     throw `Invalid register "${reg}", rd' field expects compressable register from ${regFile}8 to ${regFile}15`;
+//   }
+//   return encoded.substring(2);
+// }
 
 // Convert memory ordering to binary
 function encMem(input) {
-  // Default input to 'iorw'
-  input = input ?? 'iorw';
+  // // Default input to 'iorw'
+  // input = input ?? 'iorw';
 
   // I: Device input, O: device output, R: memory reads, W: memory writes
   const access = ['i', 'o', 'r', 'w'];
+
+  // If no input, pick a random combination (at least one bit set)
+  if (!input) {
+    let bitsArr;
+    do {
+      bitsArr = access.map(() => Math.random() < 0.5 ? '1' : '0');
+    } while (bitsArr.every(b => b === '0')); // ensure at least one bit is 1
+    return bitsArr.join('');
+  }
 
   // Construct bits from input character flags
   let bits = '';
@@ -985,37 +983,41 @@ function encMem(input) {
       bits += '0';
     }
   }
-
   if (one_count !== input.length || bits === '0000') {
     throw `Invalid IO/Mem field '${input}', expected some combination of 'iorw'`
   }
-
   return bits;
 }
 
-// Convert CSR (name or imm) to binary
-function encCSR(csr) {
-  // Attempt to find CSR value from CSR name map
-  // - If `csr` is undefined, default to `cycle`
-  let csrVal = CSR[csr ?? 'cycle'];
+// // Convert CSR (name or imm) to binary
+// function encCSR(csr) {
+//   // Attempt to find CSR value from CSR name map
+//   // - If `csr` is undefined, default to `cycle`
+//   let csrVal = CSR[csr ?? 'cycle'];
 
-  // If failed, attempt to parse as immediate
-  if (csrVal === undefined) {
-    csrVal = Number(csr) >>> 0;
+//   // If failed, attempt to parse as immediate
+//   if (csrVal === undefined) {
+//     csrVal = Number(csr) >>> 0;
 
-    // If parse failed, neither number nor valid CSR name
-    if (csrVal === 0 && csr != 0) {
-      throw `Invalid or unknown CSR name: "${csr}"`;
-    }
-  }
+//     // If parse failed, neither number nor valid CSR name
+//     if (csrVal === 0 && csr != 0) {
+//       throw `Invalid or unknown CSR name: "${csr}"`;
+//     }
+//   }
 
-  return encImm(csrVal, FIELDS.i_csr.pos[1]);
-}
+//   return encImm(csrVal, FIELDS.i_csr.pos[1]);
+// }
 
 // Convert float rounding mode name to binary
 function encFrm(frm) {
-  // Default input to 'dyn'
-  frm = frm ?? 'dyn';
+  // // Default input to 'dyn'
+  // frm = frm ?? 'dyn';
+  
+  // If no input, randomly pick one of the valid rounding modes
+  if (frm === undefined) {
+    const keys = Object.keys(FLOAT_ROUNDING_MODE);
+    frm = keys[Math.floor(Math.random() * keys.length)];
+  }
 
   // Lookup name in frm table
   const frmVal = FLOAT_ROUNDING_MODE[frm];
@@ -1094,12 +1096,4 @@ function pick_vreg() {
     val = VREGs[Math.floor(Math.random() * VREGs.length)];
   }
   return to_bin(val, 5);
-}
-
-/**
- * Generates a random rounding mode (3-bit string)
- */
-function generate_frm() {
-  const frm = Math.floor(Math.random() * 8); // 0-7
-  return frm.toString(2).padStart(3, '0');
 }

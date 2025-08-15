@@ -542,6 +542,41 @@ export const ISA_Q = {
   'fcvt.q.tu': { isa: 'RV128Q', fmt: 'R-type', funct5: '11010', fp_fmt: FP_FMT.Q, rs2: '00101', opcode: OPCODE.OP_FP },
 }
 
+// // Minimal vector-like templates (R-type with opcode 0x57). These are simple approximations to include vector encodings.
+// export const VECTOR_TEMPLATES = [
+//     "VADD_VV",  {isa: 'fill here', fmt: 'VR', funct6: '000000', funct3: '000', opcode: OPCODE.OP_VECTOR},
+//     ("VSUB_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x04, "funct3": 0x0}),
+//     ("VMUL_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x01, "funct3": 0x0}),
+//     ("VDIV_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x02, "funct3": 0x0}),
+//     ("VAND_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x07, "funct3": 0x0}),
+//     ("VOR_VV",   "VR",  {"opcode": OP_VECTOR, "funct6": 0x06, "funct3": 0x0}),
+//     ("VXOR_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x05, "funct3": 0x0}),
+
+//     # R4-type (e.g. fused multiply-add)
+//     ("VFMADD_VV",  "VR4", {"opcode": OP_FMA, "funct6": 0x00, "funct3": 0x0}),
+//     ("VFNMADD_VV", "VR4", {"opcode": OP_FMA, "funct6": 0x01, "funct3": 0x0}),
+//     ("VFMSUB_VV",  "VR4", {"opcode": OP_FMA, "funct6": 0x02, "funct3": 0x0}),
+//     ("VFNMSUB_VV", "VR4", {"opcode": OP_FMA, "funct6": 0x03, "funct3": 0x0}),
+
+//     # I-type vector instructions (shifts)
+//     ("VSLL_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x08, "funct3": 0x1}),
+//     ("VSRL_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x09, "funct3": 0x1}),
+//     ("VSRA_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x0a, "funct3": 0x1}),
+
+//     # M-type (vector mask instructions)
+//     ("VMAND_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x20, "funct3": 0x7}),
+//     ("VMNAND_MM",  "VM", {"opcode": OP_VECTOR, "funct6": 0x21, "funct3": 0x7}),
+//     ("VMOR_MM",    "VM", {"opcode": OP_VECTOR, "funct6": 0x22, "funct3": 0x7}),
+//     ("VMNOR_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x23, "funct3": 0x7}),
+//     ("VMXOR_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x24, "funct3": 0x7}),
+//     ("VMXNOR_MM",  "VM", {"opcode": OP_VECTOR, "funct6": 0x25, "funct3": 0x7}),
+//     ("VMORNOT_MM", "VM", {"opcode": OP_VECTOR, "funct6": 0x26, "funct3": 0x7}),
+
+//     ("VADD_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x01}),
+//     ("VSUB_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x05}),
+//     ("VMUL_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x1, "funct6":0x01}),       
+// ]
+
 // C instruction set
 export const ISA_C = {
 // Load and Store Instructions

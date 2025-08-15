@@ -27,15 +27,15 @@ extern uint64_t regs_after[32];
 extern uint32_t fuzz_buffer2[];
 extern size_t fuzz_buffer_len;
 
+#define BUFFER_SIZE 64  // Number of elements in the random buffer
+uint32_t fuzz_buffer3[BUFFER_SIZE];
+
 extern size_t sandbox_pages;
 extern size_t page_size;
 
 uint8_t *sandbox_ptr;
 size_t start_offset = 0x20;
 
-#define BUFFER_SIZE 64  // Number of elements in the buffer
-
-uint32_t fuzz_buffer[BUFFER_SIZE];
 uint32_t rand32() {
     // rand() typically returns 15-bit values, so combine to get 32 bits
     uint32_t r = ((uint32_t)rand() & 0x7FFF);
@@ -44,7 +44,7 @@ uint32_t rand32() {
     return r;
 }
 
-/*
+
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
     0x00000013, // nop
@@ -54,7 +54,7 @@ uint32_t fuzz_buffer[] = {
     0x00050067,	// jump to x10
     0x00048067,	// jump to x9
     0x00058067,	// jump to x11
-};*/
+};
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
@@ -83,20 +83,24 @@ void print_registers(const char *label, uint64_t regs[32])
 
 int main()
 {
-//    srand((unsigned)time(NULL));  // Seed randomness
-//    for (int i = 0; i < BUFFER_SIZE; i++) {
-//        fuzz_buffer[i] = rand32();
-//    }
+   srand((unsigned)time(NULL));  // Seed randomness
+   for (int i = 0; i < BUFFER_SIZE; i++) {
+       fuzz_buffer[i] = rand32();
+   }
 
     setup_signal_handlers();
     unmap_vdso_vvar();
     sandbox_ptr = allocate_executable_buffer();
     printf("sandbox ptr: %p\n", sandbox_ptr);
-//    for (size_t i = 0; i < (size_t)BUFFER_SIZE; i++)
-    for (size_t i = 0; i < fuzz_buffer_len; i++)
-    {
-        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
 
+    // for (size_t i = 0; i < (size_t)BUFFER_SIZE; i++)
+    // for (size_t i = 0; i < fuzz_buffer_len; i++)
+    for (size_t i = 0; i < sizeof(fuzz_buffer)/sizeof(uint32_t); i++)
+    {
+        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+        // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
+        // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer3[i]);
+        
         // loops twice to check for differing results
         for (size_t x = 0; x < 2; x++)
         {
@@ -105,8 +109,10 @@ int main()
                 prepare_sandbox(sandbox_ptr);
 
                 // replace nop with fuzzed instruction
-                //instrs[0] = fuzz_buffer[i];
-		instrs[0] = fuzz_buffer2[i];
+                instrs[0] = fuzz_buffer[i];
+		        // instrs[0] = fuzz_buffer2[i];
+                // instrs[0] = fuzz_buffer3[i];
+
                 // inject instruction
                 inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 

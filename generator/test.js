@@ -11,8 +11,15 @@ const instructions = [
     'c.lwsp',
     // 'c.swsp',
     // 'c.addi',
-    'c.lwsp x3, 5'
-    // '00000000101000000000001010010011'
+    'c.lwsp x3, 5',
+    'jal x5, 234',
+    'jal',
+    'addi',
+    'lq',
+    'fence',
+    'csrrw',
+    'csrrci',
+    'fadd.s'
 ];
 
 instructions.forEach(i => {
