@@ -3,23 +3,20 @@ import { Instruction } from './Instruction.js';
 
 // Example instructions
 const instructions = [
-    'ADD',
-    'ADDI',
-    'LD',
-    'SW',
+    // 'ADD',
+    // 'ADDI',
+    // 'LD',
+    // 'SW',
+    // 'fadd.s',
+    // 'jal',
+    // 'addi',
+    // 'lq',
+    // 'fence',
+    // 'fadd.s'
+
+    'add',
     'fadd.s',
-    'c.lwsp',
-    // 'c.swsp',
-    // 'c.addi',
-    'c.lwsp x3, 5',
-    'jal x5, 234',
-    'jal',
-    'addi',
-    'lq',
-    'fence',
-    'csrrw',
-    'csrrci',
-    'fadd.s'
+    'jal'
 ];
 
 instructions.forEach(i => {

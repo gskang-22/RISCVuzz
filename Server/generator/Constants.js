@@ -543,39 +543,42 @@ export const ISA_Q = {
 }
 
 // // Minimal vector-like templates (R-type with opcode 0x57). These are simple approximations to include vector encodings.
-// export const VECTOR_TEMPLATES = [
-//     "VADD_VV",  {isa: 'fill here', fmt: 'VR', funct6: '000000', funct3: '000', opcode: OPCODE.OP_VECTOR},
-//     ("VSUB_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x04, "funct3": 0x0}),
-//     ("VMUL_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x01, "funct3": 0x0}),
-//     ("VDIV_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x02, "funct3": 0x0}),
-//     ("VAND_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x07, "funct3": 0x0}),
-//     ("VOR_VV",   "VR",  {"opcode": OP_VECTOR, "funct6": 0x06, "funct3": 0x0}),
-//     ("VXOR_VV",  "VR",  {"opcode": OP_VECTOR, "funct6": 0x05, "funct3": 0x0}),
+export const VECTOR_TEMPLATES = [
+    // R-type vector instructions
+    { name: "VADD_VV",  isa: 'RV32V', fmt: 'VR', funct6: 0x00, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VSUB_VV",  isa: 'RV32V', fmt: 'VR', funct6: 0x04, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VMUL_VV",  isa: 'RV32V', fmt: 'VR', funct6: 0x01, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VDIV_VV",  isa: 'RV32V', fmt: 'VR', funct6: 0x02, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VAND_VV",  isa: 'RV32V', fmt: 'VR', funct6: 0x07, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VOR_VV",   isa: 'RV32V', fmt: 'VR', funct6: 0x06, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VXOR_VV",  isa: 'RV32V', fmt: 'VR', funct6: 0x05, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
 
-//     # R4-type (e.g. fused multiply-add)
-//     ("VFMADD_VV",  "VR4", {"opcode": OP_FMA, "funct6": 0x00, "funct3": 0x0}),
-//     ("VFNMADD_VV", "VR4", {"opcode": OP_FMA, "funct6": 0x01, "funct3": 0x0}),
-//     ("VFMSUB_VV",  "VR4", {"opcode": OP_FMA, "funct6": 0x02, "funct3": 0x0}),
-//     ("VFNMSUB_VV", "VR4", {"opcode": OP_FMA, "funct6": 0x03, "funct3": 0x0}),
+    // R4-type vector instructions (fused multiply-add)
+    { name: "VFMADD_VV",  isa: 'RV32V', fmt: 'VR4', funct6: 0x00, funct3: 0x0, opcode: OPCODE.OP_FMA },
+    { name: "VFNMADD_VV", isa: 'RV32V', fmt: 'VR4', funct6: 0x01, funct3: 0x0, opcode: OPCODE.OP_FMA },
+    { name: "VFMSUB_VV",  isa: 'RV32V', fmt: 'VR4', funct6: 0x02, funct3: 0x0, opcode: OPCODE.OP_FMA },
+    { name: "VFNMSUB_VV", isa: 'RV32V', fmt: 'VR4', funct6: 0x03, funct3: 0x0, opcode: OPCODE.OP_FMA },
 
-//     # I-type vector instructions (shifts)
-//     ("VSLL_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x08, "funct3": 0x1}),
-//     ("VSRL_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x09, "funct3": 0x1}),
-//     ("VSRA_VI", "VI", {"opcode": OP_VECTOR, "funct6": 0x0a, "funct3": 0x1}),
+    // I-type vector instructions (shifts)
+    { name: "VSLL_VI", isa: 'RV32V', fmt: 'VI', funct6: 0x08, funct3: 0x1, opcode: OPCODE.OP_VECTOR },
+    { name: "VSRL_VI", isa: 'RV32V', fmt: 'VI', funct6: 0x09, funct3: 0x1, opcode: OPCODE.OP_VECTOR },
+    { name: "VSRA_VI", isa: 'RV32V', fmt: 'VI', funct6: 0x0a, funct3: 0x1, opcode: OPCODE.OP_VECTOR },
 
-//     # M-type (vector mask instructions)
-//     ("VMAND_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x20, "funct3": 0x7}),
-//     ("VMNAND_MM",  "VM", {"opcode": OP_VECTOR, "funct6": 0x21, "funct3": 0x7}),
-//     ("VMOR_MM",    "VM", {"opcode": OP_VECTOR, "funct6": 0x22, "funct3": 0x7}),
-//     ("VMNOR_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x23, "funct3": 0x7}),
-//     ("VMXOR_MM",   "VM", {"opcode": OP_VECTOR, "funct6": 0x24, "funct3": 0x7}),
-//     ("VMXNOR_MM",  "VM", {"opcode": OP_VECTOR, "funct6": 0x25, "funct3": 0x7}),
-//     ("VMORNOT_MM", "VM", {"opcode": OP_VECTOR, "funct6": 0x26, "funct3": 0x7}),
+    // M-type vector mask instructions
+    { name: "VMAND_MM",   isa: 'RV32V', fmt: 'VM', funct6: 0x20, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
+    { name: "VMNAND_MM",  isa: 'RV32V', fmt: 'VM', funct6: 0x21, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
+    { name: "VMOR_MM",    isa: 'RV32V', fmt: 'VM', funct6: 0x22, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
+    { name: "VMNOR_MM",   isa: 'RV32V', fmt: 'VM', funct6: 0x23, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
+    { name: "VMXOR_MM",   isa: 'RV32V', fmt: 'VM', funct6: 0x24, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
+    { name: "VMXNOR_MM",  isa: 'RV32V', fmt: 'VM', funct6: 0x25, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
+    { name: "VMORNOT_MM", isa: 'RV32V', fmt: 'VM', funct6: 0x26, funct3: 0x7, opcode: OPCODE.OP_VECTOR },
 
-//     ("VADD_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x01}),
-//     ("VSUB_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x0, "funct6":0x05}),
-//     ("VMUL_VX",  "VX", {"opcode": OP_VECTOR, "funct3":0x1, "funct6":0x01}),       
-// ]
+    // VX-type vector instructions
+    { name: "VADD_VX", isa: 'RV32V', fmt: 'VX', funct6: 0x01, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VSUB_VX", isa: 'RV32V', fmt: 'VX', funct6: 0x05, funct3: 0x0, opcode: OPCODE.OP_VECTOR },
+    { name: "VMUL_VX", isa: 'RV32V', fmt: 'VX', funct6: 0x01, funct3: 0x1, opcode: OPCODE.OP_VECTOR },
+];
+
 
 // C instruction set
 export const ISA_C = {
