@@ -17,11 +17,6 @@ extern uint64_t freg_output_data[];
 extern size_t start_offset;
 extern void signal_trampoline(); // from assembly
 
-typedef struct {
-    void  *addr;
-    size_t len;
-} mapped_region_t;
-
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
 uint64_t regs_before[32];

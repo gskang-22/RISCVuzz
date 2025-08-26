@@ -1,6 +1,17 @@
 #include <stdint.h>
 #include <stdio.h>
 
+typedef struct {
+    void  *addr;
+    size_t len;
+} mapped_region_t;
+
+typedef struct {
+    void    *addr;    // absolute address
+    uint8_t  old_val; // expected value
+    uint8_t  new_val; // actual value
+} memdiff_t;
+
 void setup_signal_handlers();
 void initialise();
 uint8_t *allocate_executable_buffer();

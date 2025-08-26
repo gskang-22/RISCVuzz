@@ -40,6 +40,9 @@ extern mapped_region_t *g_regions;
 extern size_t g_regions_len;
 extern uintptr_t g_fault_addr;
 
+static memdiff_t *g_diffs = NULL;
+static size_t g_diffs_len = 0, g_diffs_cap = 0;
+
 uint8_t *sandbox_ptr;
 size_t start_offset = 0x20;
 
@@ -86,6 +89,42 @@ void print_registers(const char *label, uint64_t regs[32])
     {
         printf("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
     }
+}
+
+static void diffs_push(void *addr, uint8_t oldv, uint8_t newv) {
+    if (g_diffs_len == g_diffs_cap) {
+        size_t ncap = g_diffs_cap ? g_diffs_cap * 2 : 256;
+        g_diffs = realloc(g_diffs, ncap * sizeof(*g_diffs));
+        if (!g_diffs) { perror("realloc"); exit(1); }
+        g_diffs_cap = ncap;
+    }
+    g_diffs[g_diffs_len++] = (memdiff_t){ addr, oldv, newv };
+}
+
+static void report_diffs(uint8_t expected) {
+    g_diffs_len = 0;
+    for (size_t i = 0; i < g_regions_len; i++) {
+        uint8_t *p = (uint8_t *)g_regions[i].addr;
+        size_t n = g_regions[i].len;
+        for (size_t j = 0; j < n; j++) {
+            uint8_t newv = p[j];
+            if (newv != expected) {
+                void *absaddr = (uint8_t *)g_regions[i].addr + j;
+                diffs_push(absaddr, expected, newv);
+            }
+        }
+    }
+
+    for (size_t k = 0; k < g_diffs_len; k++) {
+        fprintf(stdout, "CHG: addr=%p old=0x%02x new=0x%02x\n",
+                g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
+    }
+}
+
+static bool region_exists(void *addr) {
+    for (size_t i = 0; i < g_regions_len; i++)
+        if (g_regions[i].addr == addr) return true;
+    return false;
 }
 
 static void fill_regions(uint8_t byte) {
@@ -142,7 +181,7 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
         // return true;
     } else if (jump_rc == 2) {
         // segv happened; map and retry
-        void *base = page_align_down(g_fault_addr);
+        void *base = page_align_down((void *)g_fault_addr);
         map_two_pages(base);
 
         run_sandbox(sandbox_ptr);
@@ -153,7 +192,7 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
         // return false;
     }
 }
-
+/*
 static void execute_testcase_or_fast_return() {
     g_regions_len = 0;
     // Probe first (fast path)
@@ -166,15 +205,14 @@ static void execute_testcase_or_fast_return() {
 
     fprintf(stdout, "[slow-path] segfaults observed; dual passes...\n");
     // Loop over fill bytes for slow passes
-    const uint8_t slow_fills[] = {0x00, 0xFF};
-    for (size_t i = 0; i < sizeof(slow_fills)/sizeof(slow_fills[0]); i++) {
-        uint8_t fill = slow_fills[i];
-        fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A' + (int)i, fill);
-        rc = run_until_quiet(1, fill);
-        fprintf(stdout, "[pass %c] rc=%d faults=%d\n", 'A' + (int)i, rc, g_faults_this_run);
-        report_diffs(fill);
-    }
-}
+        const uint8_t fills[] = {0x00, 0xFF};
+        for (size_t i = 0; i < sizeof(fills)/sizeof(fills[0]); i++) {
+            fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A'+(int)i, fills[i]);
+            run_until_quiet(1, fills[i]);
+            fprintf(stdout, "[pass %c] faults=%d\n", 'A'+(int)i, g_faults_this_run);
+            report_diffs(fills[i]);
+        }
+}*/
 
 
 int main()
@@ -213,14 +251,13 @@ int main()
             // slow path
             fprintf(stdout, "[slow-path] segfaults observed; dual passes...\n");
             // Loop over fill bytes for slow passes
-            const uint8_t fills[] = {0x00, 0xFF};
+                   const uint8_t fills[] = {0x00, 0xFF};
             for (size_t i = 0; i < sizeof(fills)/sizeof(fills[0]); i++) {
-                fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A'+(int)f, fills[f]);
-                ok = run_until_quiet(1, fills[f]);
-                fprintf(stdout, "[pass %c] ok=%d faults=%d\n", 'A'+(int)f, ok, g_faults_this_run);
-                if (ok) report_diffs(fills[f]);
-            }
-        
+                fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A'+(int)i, fills[i]);
+                run_until_quiet(1, fills[i]);
+                fprintf(stdout, "[pass %c] faults=%d\n", 'A'+(int)i, g_faults_this_run);
+                report_diffs(fills[i]);
+            } 
         // if (sigsetjmp(jump_buffer, 1) == 0)
             // {
             //     prepare_sandbox(sandbox_ptr);
