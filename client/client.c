@@ -25,12 +25,12 @@ uint64_t regs_after[32];
 uint64_t fcsr_output_data;
 char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
-static volatile sig_atomic_t g_faults_this_run = 0;
-static volatile uintptr_t g_fault_addr = 0;
-static mapped_region_t *g_regions = NULL;
-static size_t g_regions_len = 0;
-static size_t g_regions_cap = 0;
-static size_t g_pagesize = 0;
+volatile sig_atomic_t g_faults_this_run = 0;
+volatile uintptr_t g_fault_addr = 0;
+mapped_region_t *g_regions = NULL;
+size_t g_regions_len = 0;
+size_t g_regions_cap = 0;
+size_t g_pagesize = 0;
 
 size_t page_size = 4096;
 size_t sandbox_pages = 1; // 4 KB sandbox
@@ -162,7 +162,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
-        g_fault_addr = fault_addr;
+        g_fault_addr = (uintptr_t)fault_addr;
         g_faults_this_run++;
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
         break;

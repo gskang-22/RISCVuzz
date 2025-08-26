@@ -35,10 +35,10 @@ extern size_t sandbox_pages;
 extern size_t page_size;
 
 #define MAX_MAPPED_PAGES 4
-extern sig_atomic_t g_faults_this_run;
+extern volatile sig_atomic_t g_faults_this_run;
 extern mapped_region_t *g_regions;
 extern size_t g_regions_len;
-extern uintptr_t g_fault_addr;
+extern volatile uintptr_t g_fault_addr;
 
 static memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0, g_diffs_cap = 0;
@@ -57,13 +57,13 @@ uint32_t rand32() {
 
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
-    0x00000013, // nop
-    0x10028027, // ghostwrite
-    0xFFFFFFFF, // illegal instruction
+//    0x00000013, // nop
+//    0x10028027, // ghostwrite
+//    0xFFFFFFFF, // illegal instruction
     0x00008067, // ret 
-    0x00050067,	// jump to x10
-    0x00048067,	// jump to x9
-    0x00058067,	// jump to x11
+//    0x00050067,	// jump to x10
+//    0x00048067,	// jump to x9
+//    0x00058067,	// jump to x11
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
@@ -192,36 +192,15 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
         // return false;
     }
 }
-/*
-static void execute_testcase_or_fast_return() {
-    g_regions_len = 0;
-    // Probe first (fast path)
-    run_until_quiet(0, 0);
-
-    if (g_regions_len == 0) {
-        fprintf(stdout, "[fast-path] no segfaults; returning immediately.\n");
-        return;
-    }
-
-    fprintf(stdout, "[slow-path] segfaults observed; dual passes...\n");
-    // Loop over fill bytes for slow passes
-        const uint8_t fills[] = {0x00, 0xFF};
-        for (size_t i = 0; i < sizeof(fills)/sizeof(fills[0]); i++) {
-            fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A'+(int)i, fills[i]);
-            run_until_quiet(1, fills[i]);
-            fprintf(stdout, "[pass %c] faults=%d\n", 'A'+(int)i, g_faults_this_run);
-            report_diffs(fills[i]);
-        }
-}*/
-
 
 int main()
 {
-   srand((unsigned)time(NULL));  // Seed randomness
-   for (int i = 0; i < BUFFER_SIZE; i++) {
-       fuzz_buffer[i] = rand32();
-   }
+//   srand((unsigned)time(NULL));  // Seed randomness
+//   for (int i = 0; i < BUFFER_SIZE; i++) {
+//       fuzz_buffer[i] = rand32();
+//   }
 
+    g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     setup_signal_handlers();
     unmap_vdso_vvar();
     sandbox_ptr = allocate_executable_buffer();
@@ -236,8 +215,12 @@ int main()
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer3[i]);
         
         // loops twice to check for differing results
-        for (size_t x = 0; x < 2; x++)
-        {
+//        for (size_t x = 0; x < 2; x++)
+//        {
+	    instrs[0] = fuzz_buffer[i];
+
+	    // inject instructions
+	    inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
             g_regions_len = 0;
 
             // Probe once (fast path)
@@ -258,54 +241,8 @@ int main()
                 fprintf(stdout, "[pass %c] faults=%d\n", 'A'+(int)i, g_faults_this_run);
                 report_diffs(fills[i]);
             } 
-        // if (sigsetjmp(jump_buffer, 1) == 0)
-            // {
-            //     prepare_sandbox(sandbox_ptr);
-
-            //     // replace nop with fuzzed instruction
-            //     instrs[0] = fuzz_buffer[i];
-		    //     // instrs[0] = fuzz_buffer2[i];
-            //     // instrs[0] = fuzz_buffer3[i];
-
-            //     // inject instruction
-            //     inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
-            //     run_sandbox(sandbox_ptr);
-
-            //     // print_registers("Registers Before", regs_before);
-            //     // print_registers("Registers After", regs_after);
-            //     // print_reg_changes(regs_before, regs_after);
-            // }
-            // else
-            // {
-                
-            // }
-        }
         printf("\n");
     }
     return 0;
 }
 
-/*
-        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
-        memset(sandbox_ptr, 0, sandbox_size);
-        pid_t pid = fork();
-        if (pid == 0)
-        {
-            // replace nop with fuzzed instruction
-            instrs[0] = fuzz_buffer[i];
-            // inject instruction
-            inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t), start_offset, sandbox_size);
-            run_sandbox(sandbox_ptr);
-            _exit(0);
-        }
-        else
-        {
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFSIGNALED(status))
-                printf("Child crashed with signal %d\n", WTERMSIG(status));
-            else
-                printf("Child exited %d\n", WEXITSTATUS(status));
-        }
-*/
