@@ -166,9 +166,7 @@ static void map_two_pages(void *base) {
 
 /* ========= Unified runner ========= */
 static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
-    g_faults_this_run = 0;
     g_fault_addr = 0;
-    if (fill_mode) fill_regions(fill_byte);
 
     int jump_rc = sigsetjmp(jump_buffer, 1);
 
@@ -183,7 +181,7 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
         // segv happened; map and retry
         void *base = page_align_down((void *)g_fault_addr);
         map_two_pages(base);
-
+        fill_regions(fill_byte); // loops through g_regions to map them 
         run_sandbox(sandbox_ptr);
         // return false;
     } else if (jump_rc == 3) {
@@ -217,30 +215,36 @@ int main()
         // loops twice to check for differing results
 //        for (size_t x = 0; x < 2; x++)
 //        {
-	    instrs[0] = fuzz_buffer[i];
 
-	    // inject instructions
+	    // prepare sandbox
+        prepare_sandbox(sandbox_ptr);
+        instrs[0] = fuzz_buffer[i];
 	    inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-            g_regions_len = 0;
 
-            // Probe once (fast path)
-            run_until_quiet(0, 0);
+        g_faults_this_run = 0;
+        g_regions_len = 0;
 
-            if (g_regions_len == 0) {
-                fprintf(stdout, "[fast-path] no segfaults; return.\n");
-                continue;
-            }
+        int jump_rc = sigsetjmp(jump_buffer, 1);
+        if (jump_rc == 0) {
+            run_sandbox(sandbox_ptr);
+            continue; // no faults raised
+        } else if (jump_rc == 1) {
+            continue; // non SIGSEGV fault raised
+        }
 
-            // slow path
-            fprintf(stdout, "[slow-path] segfaults observed; dual passes...\n");
-            // Loop over fill bytes for slow passes
-                   const uint8_t fills[] = {0x00, 0xFF};
-            for (size_t i = 0; i < sizeof(fills)/sizeof(fills[0]); i++) {
-                fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A'+(int)i, fills[i]);
-                run_until_quiet(1, fills[i]);
-                fprintf(stdout, "[pass %c] faults=%d\n", 'A'+(int)i, g_faults_this_run);
-                report_diffs(fills[i]);
-            } 
+        // SIGSEGV if code reaches here
+        printf("Code raised sigsegv fault");
+
+        run_until_quiet(1, 0x00);
+        report_diffs(0x00);
+
+        prepare_sandbox(sandbox_ptr);
+        instrs[0] = fuzz_buffer[i];
+	    inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+        run_until_quiet(1, 0xFF);
+        report_diffs(0xFF);
+
         printf("\n");
     }
     return 0;
