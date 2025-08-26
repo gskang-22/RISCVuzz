@@ -17,6 +17,7 @@ futher expansion.
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <time.h>
+#include <stdbool.h>
 
 extern void run_sandbox();
 extern void test_start();
@@ -32,6 +33,12 @@ uint32_t fuzz_buffer3[BUFFER_SIZE];
 
 extern size_t sandbox_pages;
 extern size_t page_size;
+
+#define MAX_MAPPED_PAGES 4
+extern sig_atomic_t g_faults_this_run;
+extern mapped_region_t *g_regions;
+extern size_t g_regions_len;
+extern uintptr_t g_fault_addr;
 
 uint8_t *sandbox_ptr;
 size_t start_offset = 0x20;
@@ -81,6 +88,95 @@ void print_registers(const char *label, uint64_t regs[32])
     }
 }
 
+static void fill_regions(uint8_t byte) {
+    for (size_t i = 0; i < g_regions_len; i++) {
+        memset(g_regions[i].addr, byte, g_regions[i].len);
+    }
+}
+
+static void regions_push(void *addr, size_t len) {
+    if (g_regions_len < MAX_MAPPED_PAGES) {
+        g_regions[g_regions_len].addr = addr;
+        g_regions[g_regions_len].len = len;
+        g_regions_len++;
+    }
+}
+
+// Takes an arbitrary address (p, which caused the segfault) and rounds it down to the start of the containing page
+// Since mmap() only works at page-aligned addresses
+static inline void *page_align_down(void *p) {
+    uintptr_t u = (uintptr_t)p;
+    return (void *)(u & ~(uintptr_t)(page_size - 1));
+}
+// Maps two pages of memory (base and base + pagesize) starting at the faulting page
+static void map_two_pages(void *base) {
+    if (g_regions_len >= MAX_MAPPED_PAGES) return;
+
+    if (!region_exists(base)) {
+        void *r = mmap(base, 2 * page_size,
+                       PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,
+                       -1, 0);
+        if (r == MAP_FAILED) {
+            perror("mmap");
+        } else {
+            regions_push(base, 2 * page_size);
+        }
+    }
+}
+
+/* ========= Unified runner ========= */
+static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
+    g_faults_this_run = 0;
+    g_fault_addr = 0;
+    if (fill_mode) fill_regions(fill_byte);
+
+    int jump_rc = sigsetjmp(jump_buffer, 1);
+
+    if (jump_rc == 0) {
+        run_sandbox(sandbox_ptr);
+        // return true; // --> finished no faults
+    } else if (jump_rc == 1) {
+        // non-SEGV fault
+        printf("Recovered from crash\n");
+        // return true;
+    } else if (jump_rc == 2) {
+        // segv happened; map and retry
+        void *base = page_align_down(g_fault_addr);
+        map_two_pages(base);
+
+        run_sandbox(sandbox_ptr);
+        // return false;
+    } else if (jump_rc == 3) {
+        // threshold exceeded 
+        fprintf(stdout, "[probe] threshold exceeded; proceeding anyway.\n");
+        // return false;
+    }
+}
+
+static void execute_testcase_or_fast_return() {
+    g_regions_len = 0;
+    // Probe first (fast path)
+    run_until_quiet(0, 0);
+
+    if (g_regions_len == 0) {
+        fprintf(stdout, "[fast-path] no segfaults; returning immediately.\n");
+        return;
+    }
+
+    fprintf(stdout, "[slow-path] segfaults observed; dual passes...\n");
+    // Loop over fill bytes for slow passes
+    const uint8_t slow_fills[] = {0x00, 0xFF};
+    for (size_t i = 0; i < sizeof(slow_fills)/sizeof(slow_fills[0]); i++) {
+        uint8_t fill = slow_fills[i];
+        fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A' + (int)i, fill);
+        rc = run_until_quiet(1, fill);
+        fprintf(stdout, "[pass %c] rc=%d faults=%d\n", 'A' + (int)i, rc, g_faults_this_run);
+        report_diffs(fill);
+    }
+}
+
+
 int main()
 {
    srand((unsigned)time(NULL));  // Seed randomness
@@ -104,28 +200,49 @@ int main()
         // loops twice to check for differing results
         for (size_t x = 0; x < 2; x++)
         {
-            if (sigsetjmp(jump_buffer, 1) == 0)
-            {
-                prepare_sandbox(sandbox_ptr);
+            g_regions_len = 0;
 
-                // replace nop with fuzzed instruction
-                instrs[0] = fuzz_buffer[i];
-		        // instrs[0] = fuzz_buffer2[i];
-                // instrs[0] = fuzz_buffer3[i];
+            // Probe once (fast path)
+            run_until_quiet(0, 0);
 
-                // inject instruction
-                inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
-                run_sandbox(sandbox_ptr);
-
-                // print_registers("Registers Before", regs_before);
-                // print_registers("Registers After", regs_after);
-                // print_reg_changes(regs_before, regs_after);
+            if (g_regions_len == 0) {
+                fprintf(stdout, "[fast-path] no segfaults; return.\n");
+                continue;
             }
-            else
-            {
-                printf("Recovered from crash\n");
+
+            // slow path
+            fprintf(stdout, "[slow-path] segfaults observed; dual passes...\n");
+            // Loop over fill bytes for slow passes
+            const uint8_t fills[] = {0x00, 0xFF};
+            for (size_t i = 0; i < sizeof(fills)/sizeof(fills[0]); i++) {
+                fprintf(stdout, "[pass %c] fill=0x%02X\n", 'A'+(int)f, fills[f]);
+                ok = run_until_quiet(1, fills[f]);
+                fprintf(stdout, "[pass %c] ok=%d faults=%d\n", 'A'+(int)f, ok, g_faults_this_run);
+                if (ok) report_diffs(fills[f]);
             }
+        
+        // if (sigsetjmp(jump_buffer, 1) == 0)
+            // {
+            //     prepare_sandbox(sandbox_ptr);
+
+            //     // replace nop with fuzzed instruction
+            //     instrs[0] = fuzz_buffer[i];
+		    //     // instrs[0] = fuzz_buffer2[i];
+            //     // instrs[0] = fuzz_buffer3[i];
+
+            //     // inject instruction
+            //     inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+            //     run_sandbox(sandbox_ptr);
+
+            //     // print_registers("Registers Before", regs_before);
+            //     // print_registers("Registers After", regs_after);
+            //     // print_reg_changes(regs_before, regs_after);
+            // }
+            // else
+            // {
+                
+            // }
         }
         printf("\n");
     }

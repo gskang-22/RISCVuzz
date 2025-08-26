@@ -16,18 +16,31 @@ extern uint64_t xreg_output_data[];
 extern uint64_t freg_output_data[];
 extern size_t start_offset;
 extern void signal_trampoline(); // from assembly
-uint64_t fcsr_output_data;
+
+typedef struct {
+    void  *addr;
+    size_t len;
+} mapped_region_t;
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
 uint64_t regs_before[32];
 uint64_t regs_after[32];
-static char alt_stack[SIGSTKSZ]; // Signal alternate stack
+
+uint64_t fcsr_output_data;
+char alt_stack[SIGSTKSZ]; // Signal alternate stack
+
+static volatile sig_atomic_t g_faults_this_run = 0;
+static volatile uintptr_t g_fault_addr = 0;
+static mapped_region_t *g_regions = NULL;
+static size_t g_regions_len = 0;
+static size_t g_regions_cap = 0;
+static size_t g_pagesize = 0;
 
 size_t page_size = 4096;
 size_t sandbox_pages = 1; // 4 KB sandbox
 size_t guard_pages = 16;  // 64 KB guards (tunable)
-
+#define MAX_FAULTS_PER_RUN 10
 /*
 Code for client (RISC-V board)
 Aim:
@@ -82,15 +95,24 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t nu
         perror("mprotect");
         exit(1);
     }
+
     // Fill sandbox with ebreak (0x00100073)
-    for (size_t i = 0; i < sandbox_pages * page_size; i += 4) {
-        *(uint32_t *)(sandbox_ptr + i) = 0x00100073;
-    }
+    // for (size_t i = 0; i < sandbox_pages * page_size; i += 4) {
+    //     *(uint32_t *)(sandbox_ptr + i) = 0x00100073;
+    // }
+
+    // fill 2 ebreaks before the sandboxed instructions
+    for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
+        *(uint32_t *)(sandbox_ptr + start_offset - 2 * sizeof(uint32_t) + i) = 0x00100073;
+
+    // fill 2 ebreaks after the sandboxed instructions
+    for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
+        *(uint32_t *)(sandbox_ptr + start_offset + num_instrs * sizeof(uint32_t) + i) = 0x00100073;
 
     // copy fuzzed instructions
     memcpy(sandbox_ptr + start_offset, instrs, num_instrs * sizeof(uint32_t));
 
-    // flush instruction cache, preventing inconsisten results
+    // flush instruction cache, preventing inconsistent results
     asm volatile("fence.i" ::: "memory");
 
     // make page executable
@@ -105,7 +127,8 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t nu
 void signal_handler(int signo, siginfo_t *info, void *context)
 {
     ucontext_t *uc = (ucontext_t *)context;
-    saved_context = *uc; // Save the context for inspection after jump
+    // saved_context = *uc; // Save the context for inspection after jump
+    void *fault_addr = info->si_addr;
 
     // === Save general-purpose registers (x0-x31) ===
     for (int i = 0; i < 32; i++)
@@ -136,11 +159,17 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     {
     case SIGILL:
         printf("Caught SIGILL (Illegal Instruction)\n");
-        printf("Faulting address: %p\n", info->si_addr);
+        printf("Faulting address: %p\n", fault_addr);
         break;
     case SIGSEGV:
         printf("Caught SIGSEGV (Segmentation Fault)\n");
-        printf("Faulting address: %p\n", info->si_addr);
+        printf("Faulting address: %p\n", fault_addr);
+        if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
+            siglongjmp(jump_buffer, 3); // threshold exceeded
+        }
+        g_fault_addr = fault_addr;
+        g_faults_this_run++;
+        siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
         break;
     case SIGBUS:
         printf("Caught SIGBUS (Bus Error)\n");
@@ -154,7 +183,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     default:
         printf("Caught signal %d\n", signo);
     }
-    siglongjmp(jump_buffer, 1);
+    siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
 }
 
 // Setup signal handlers
