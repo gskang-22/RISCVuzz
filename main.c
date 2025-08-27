@@ -45,16 +45,16 @@ uint32_t rand32()
 
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
-        0x00000013, // nop
-        0x10028027, // ghostwrite
-        0xFFFFFFFF, // illegal instruction
+    0x00000013, // nop
+    0x10028027, // ghostwrite
+    0xFFFFFFFF, // illegal instruction
     0x00008067, // ret
-        0x00050067,	// jump to x10
-        0x00048067,	// jump to x9
-        0x00058067,	// jump to x11
-	0x0000a103,	// lw x2, 0(x1)
-	0x0142b183, 	// ld x3, 20(x5)
-	0x01423183,     // ld x3, 20(x4)
+    0x00050067, // jump to x10
+    0x00048067, // jump to x9
+    0x00058067, // jump to x11
+    0x0000a103, // lw x2, 0(x1)
+    0x0142b183, // ld x3, 20(x5)
+    0x01423183, // ld x3, 20(x4)
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
@@ -122,14 +122,6 @@ static bool region_exists(void *addr)
     return false;
 }
 
-static void fill_regions(uint8_t byte)
-{
-    for (size_t i = 0; i < g_regions_len; i++)
-    {
-        memset(g_regions[i].addr, byte, g_regions[i].len);
-    }
-}
-
 static void regions_push(void *addr, size_t len)
 {
     if (g_regions_len < MAX_MAPPED_PAGES)
@@ -149,7 +141,7 @@ static inline void *page_align_down(void *p)
 }
 
 // Maps two pages of memory (base and base + pagesize) starting at the faulting page
-static void map_two_pages(void *base)
+static void map_two_pages(void *base, uint8_t fill_byte)
 {
     if (g_regions_len >= MAX_MAPPED_PAGES)
         return;
@@ -163,11 +155,12 @@ static void map_two_pages(void *base)
         if (r == MAP_FAILED)
         {
             perror("mmap failed for lazy mapping");
-    	    siglongjmp(jump_buffer, 4);  // abort / skip this test case
+            siglongjmp(jump_buffer, 4); // abort / skip this test case
         }
         else
         {
             regions_push(base, 2 * page_size);
+            memset(g_regions[g_regions_len - 1].addr, fill_byte, g_regions[g_regions_len - 1].len);
         }
     }
 }
@@ -194,8 +187,7 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
     {
         // segv happened; map and retry
         void *base = page_align_down((void *)g_fault_addr);
-        map_two_pages(base);
-        fill_regions(fill_byte); // loops through g_regions to map them
+        map_two_pages(base, fill_byte);
         run_sandbox(sandbox_ptr);
         // return false;
     }
@@ -226,7 +218,7 @@ int main()
     // for (size_t i = 0; i < fuzz_buffer_len; i++)
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
-	printf("\n");
+        printf("\n");
         printf("\n");
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
@@ -261,10 +253,10 @@ int main()
 
         // SIGSEGV if code reaches here
         printf("Code raised sigsegv fault");
-return;
-        run_until_quiet(1, 0x00);
-        report_diffs(0x00);
 
+        run_until_quiet(1, 0x00);
+        // report_diffs(0x00);
+return 0;
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
@@ -272,21 +264,21 @@ return;
         printf("g_faults_this_run = %d\n", g_faults_this_run);
         printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
 
-        if (g_regions != NULL)
-        {
-            printf("Mapped regions:\n");
-            for (size_t i = 0; i < g_regions_len; i++)
-            {
-                printf("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-            }
-        }
-        else
-        {
-            printf("g_regions is NULL\n");
-        }
+        // if (g_regions != NULL)
+        // {
+        //     printf("Mapped regions:\n");
+        //     for (size_t i = 0; i < g_regions_len; i++)
+        //     {
+        //         printf("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+        //     }
+        // }
+        // else
+        // {
+        //     printf("g_regions is NULL\n");
+        // }
 
         run_until_quiet(1, 0xFF);
-        report_diffs(0xFF);
+        // report_diffs(0xFF);
     }
     return 0;
 }
