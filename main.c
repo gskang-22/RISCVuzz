@@ -178,12 +178,12 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
         run_sandbox(sandbox_ptr);
         // return true; // --> finished no faults
     }
-    else if (jump_rc == 1)
-    {
-        // non-SEGV fault
-        printf("Recovered from crash\n");
-        // return true;
-    }
+    // else if (jump_rc == 1)
+    // {
+    //     // non-SEGV fault
+    //     printf("Recovered from crash\n");
+    //     // return true;
+    // }
     else if (jump_rc == 2)
     {
         // segv happened; map and retry
@@ -193,17 +193,15 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
         run_sandbox(sandbox_ptr);
         // return false;
     }
-    else if (jump_rc == 3)
-    {
-        // threshold exceeded
-        fprintf(stdout, "[probe] threshold exceeded; proceeding anyway.\n");
-        // return false;
-    }
-    else if (jump_rc == 4)
-    {
-        // SIGSEGV occured in sandbox memory or kernel region; abort
-        printf("SEGSEGV occured in sandbox memory");
-    }
+    // else if (jump_rc == 3)
+    // {
+    //     // threshold exceeded
+    //     // return false;
+    // }
+    // else if (jump_rc == 4)
+    // {
+    //     // SIGSEGV occured in sandbox memory or kernel region; abort
+    // }
 }
 
 int main()

@@ -165,12 +165,13 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
             // SIGSEGV occured in sandbox page or kernel. Abort
-            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning");
+            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
             siglongjmp(jump_buffer, 4);
             break;
         }
         if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
         {
+            printf("threshold exceeded; proceeding anyway.\n");
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
         g_fault_addr = (uintptr_t)fault_addr;
