@@ -9,7 +9,6 @@
 #include <setjmp.h>
 #include <ucontext.h>
 
-extern size_t sandbox_size;
 extern const char *reg_names[32];
 extern uint64_t temp_storage[];
 extern uint64_t xreg_output_data[];
@@ -162,7 +161,9 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     case SIGSEGV:
         printf("Caught SIGSEGV (Segmentation Fault)\n");
         printf("Faulting address: %p\n", fault_addr);
-        if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
+        if (((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr 
+            && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size)) 
+            || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
             // SIGSEGV occured in sandbox page or kernel. Abort
             printf("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");

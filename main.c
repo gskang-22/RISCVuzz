@@ -169,6 +169,7 @@ static void map_two_pages(void *base)
 
 static void run_until_quiet(int fill_mode, uint8_t fill_byte)
 {
+    printf("running loop: %i", fill_byte);
     g_fault_addr = 0;
 
     int jump_rc = sigsetjmp(jump_buffer, 1);
@@ -221,6 +222,7 @@ int main()
     // for (size_t i = 0; i < fuzz_buffer_len; i++)
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
+        printf("\n");
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer3[i]);
@@ -246,13 +248,15 @@ int main()
         }
         else if (jump_rc == 1 || jump_rc == 4)
         {
+            fprintf(stderr, "Skipping invalid instruction at fuzz %zu\n", i);
+            fflush(stderr);
             // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
             continue;
         }
 
         // SIGSEGV if code reaches here
         printf("Code raised sigsegv fault");
-
+return;
         run_until_quiet(1, 0x00);
         report_diffs(0x00);
 
@@ -278,8 +282,6 @@ int main()
 
         run_until_quiet(1, 0xFF);
         report_diffs(0xFF);
-
-        printf("\n");
     }
     return 0;
 }
