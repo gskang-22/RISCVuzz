@@ -45,13 +45,16 @@ uint32_t rand32()
 
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
-    //    0x00000013, // nop
-    //    0x10028027, // ghostwrite
-    //    0xFFFFFFFF, // illegal instruction
+        0x00000013, // nop
+        0x10028027, // ghostwrite
+        0xFFFFFFFF, // illegal instruction
     0x00008067, // ret
-    //    0x00050067,	// jump to x10
-    //    0x00048067,	// jump to x9
-    //    0x00058067,	// jump to x11
+        0x00050067,	// jump to x10
+        0x00048067,	// jump to x9
+        0x00058067,	// jump to x11
+	0x0000a103,	// lw x2, 0(x1)
+	0x0142b183, 	// ld x3, 20(x5)
+	0x01423183,     // ld x3, 20(x4)
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
@@ -144,6 +147,7 @@ static inline void *page_align_down(void *p)
     uintptr_t u = (uintptr_t)p;
     return (void *)(u & ~(uintptr_t)(page_size - 1));
 }
+
 // Maps two pages of memory (base and base + pagesize) starting at the faulting page
 static void map_two_pages(void *base)
 {
@@ -158,7 +162,8 @@ static void map_two_pages(void *base)
                        -1, 0);
         if (r == MAP_FAILED)
         {
-            perror("mmap");
+            perror("mmap failed for lazy mapping");
+    	    siglongjmp(jump_buffer, 4);  // abort / skip this test case
         }
         else
         {
@@ -211,7 +216,6 @@ int main()
     //   for (int i = 0; i < BUFFER_SIZE; i++) {
     //       fuzz_buffer[i] = rand32();
     //   }
-
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     setup_signal_handlers();
     unmap_vdso_vvar();
@@ -222,6 +226,7 @@ int main()
     // for (size_t i = 0; i < fuzz_buffer_len; i++)
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
+	printf("\n");
         printf("\n");
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
