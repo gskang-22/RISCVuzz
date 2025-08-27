@@ -121,9 +121,8 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t nu
 void signal_handler(int signo, siginfo_t *info, void *context)
 {
     ucontext_t *uc = (ucontext_t *)context;
-    // saved_context = *uc; // Save the context for inspection after jump
     void *fault_addr = info->si_addr;
-
+    uintptr_t pc = uc->uc_mcontext.__gregs[REG_PC];  
     // === Save general-purpose registers (x0-x31) ===
     for (int i = 0; i < 32; i++)
     {
@@ -159,25 +158,6 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         printf("Caught SIGILL (Illegal Instruction)\n");
         printf("Faulting address: %p\n", fault_addr);
         break;
-    case SIGSEGV:
-        printf("Caught SIGSEGV (Segmentation Fault)\n");
-        printf("Faulting address: %p\n", fault_addr);
-        if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
-        {
-            // SIGSEGV occured in sandbox page or kernel. Abort
-            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
-            siglongjmp(jump_buffer, 4);
-            break;
-        }
-        if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
-        {
-            printf("threshold exceeded; proceeding anyway.\n");
-            siglongjmp(jump_buffer, 3); // threshold exceeded
-        }
-        g_fault_addr = (uintptr_t)fault_addr;
-        g_faults_this_run++;
-        siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
-        break;
     case SIGBUS:
         printf("Caught SIGBUS (Bus Error)\n");
         break;
@@ -187,8 +167,29 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     case SIGTRAP:
         printf("Caught SIGTRAP: EBREAK\n");
         break;
+    case SIGSEGV:
+        printf("Caught SIGSEGV (Segmentation Fault)\n");
+        printf("Faulting address: %p\n", fault_addr);
+
+        if (pc == (uintptr_t)fault_addr) {
+            // PC has escaped from sandbox; abort
+            fprintf(stderr, "[jump] PC escaped sandbox: 0x%lx\n", pc);
+            siglongjmp(jump_buffer, 4);
+        } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
+        {
+            // SIGSEGV occured in sandbox page or kernel. Abort
+            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
+            siglongjmp(jump_buffer, 4);
+        } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
+        {
+            printf("threshold exceeded; proceeding anyway.\n");
+            siglongjmp(jump_buffer, 3); // threshold exceeded
+        }
+        g_fault_addr = (uintptr_t)fault_addr;
+        g_faults_this_run++;
+        siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
     default:
-        printf("Caught signal %d\n", signo);
+        printf("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
     }
     siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
 }
