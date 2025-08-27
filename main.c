@@ -142,6 +142,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                        PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_REPLACE,
                        -1, 0);
+        printf("f: %p\n", r);
         if (r == MAP_FAILED)
         {
             perror("mmap failed for lazy mapping");
@@ -149,6 +150,10 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         }
         else
         {
+            printf("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+                (unsigned long)(uintptr_t)base,
+                (unsigned long)(uintptr_t)r);
+                       
             // add region to g_regions array
             if (g_regions_len < MAX_MAPPED_PAGES)
             {
@@ -156,11 +161,11 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                 g_regions[g_regions_len].len = 2 * page_size;
                 g_regions_len++;
             }
-            // fill mapped regions with fill_byte
-            for (size_t i = 0; i < g_regions_len; i++)
-            {
-                memset(g_regions[i].addr, fill_byte, g_regions[i].len);
-            }
+            // // fill mapped regions with fill_byte
+            // for (size_t i = 0; i < g_regions_len; i++)
+            // {
+            //     memset(g_regions[i].addr, fill_byte, g_regions[i].len);
+            // }
         }
     }
 }
@@ -266,7 +271,7 @@ int main()
         //     printf("g_regions is NULL\n");
         // }
 
-        run_until_quiet(1, 0xFF);
+        // run_until_quiet(1, 0xFF);
         // report_diffs(0xFF);
     }
     return 0;
