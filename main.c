@@ -6,18 +6,7 @@ futher expansion.
 */
 
 #include "client.h"
-#include <stdint.h>
-#include <unistd.h>
-#include <setjmp.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <time.h>
-#include <stdbool.h>
+#include "main.h"
 
 extern void run_sandbox();
 extern void test_start();
@@ -28,59 +17,49 @@ extern uint64_t regs_after[32];
 extern uint32_t fuzz_buffer2[];
 extern size_t fuzz_buffer_len;
 
-#define BUFFER_SIZE 64  // Number of elements in the random buffer
+#define BUFFER_SIZE 64 // Number of elements in the random buffer
 uint32_t fuzz_buffer3[BUFFER_SIZE];
+uint8_t *sandbox_ptr;
 
 extern size_t sandbox_pages;
 extern size_t page_size;
 
 #define MAX_MAPPED_PAGES 4
-extern volatile sig_atomic_t g_faults_this_run;
-extern mapped_region_t *g_regions;
-extern size_t g_regions_len;
-extern volatile uintptr_t g_fault_addr;
+volatile sig_atomic_t g_faults_this_run = 0;
+volatile uintptr_t g_fault_addr = 0;
+static mapped_region_t *g_regions = NULL;
+static size_t g_regions_len = 0;
 
 static memdiff_t *g_diffs = NULL;
-static size_t g_diffs_len = 0, g_diffs_cap = 0;
+static size_t g_diffs_len = 0;
+static size_t g_diffs_cap = 0;
 
-uint8_t *sandbox_ptr;
-size_t start_offset = 0x20;
-
-uint32_t rand32() {
+uint32_t rand32()
+{
     // rand() typically returns 15-bit values, so combine to get 32 bits
     uint32_t r = ((uint32_t)rand() & 0x7FFF);
     r |= ((uint32_t)rand() & 0x7FFF) << 15;
-    r |= ((uint32_t)rand() & 0x3) << 30;  // Only need 2 more bits
+    r |= ((uint32_t)rand() & 0x3) << 30; // Only need 2 more bits
     return r;
 }
 
-
 uint32_t fuzz_buffer[] = {
     // instructions to be injected
-//    0x00000013, // nop
-//    0x10028027, // ghostwrite
-//    0xFFFFFFFF, // illegal instruction
-    0x00008067, // ret 
-//    0x00050067,	// jump to x10
-//    0x00048067,	// jump to x9
-//    0x00058067,	// jump to x11
+    //    0x00000013, // nop
+    //    0x10028027, // ghostwrite
+    //    0xFFFFFFFF, // illegal instruction
+    0x00008067, // ret
+    //    0x00050067,	// jump to x10
+    //    0x00048067,	// jump to x9
+    //    0x00058067,	// jump to x11
 };
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00000013, // nop to be replaced
 
-    0x00048067  // jalr x0, 0(x9)
+    0x00048067 // jalr x0, 0(x9)
 };
-
-const char *reg_names[] = {
-    "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
-    "x5 (t0)", "x6 (t1)", "x7 (t2)", "x8 (s0/fp)", "x9 (s1)",
-    "x10 (a0)", "x11 (a1)", "x12 (a2)", "x13 (a3)", "x14 (a4)",
-    "x15 (a5)", "x16 (a6)", "x17 (a7)", "x18 (s2)", "x19 (s3)",
-    "x20 (s4)", "x21 (s5)", "x22 (s6)", "x23 (s7)", "x24 (s8)",
-    "x25 (s9)", "x26 (s10)", "x27 (s11)", "x28 (t3)", "x29 (t4)",
-    "x30 (t5)", "x31 (t6)"};
 
 void print_registers(const char *label, uint64_t regs[32])
 {
@@ -91,50 +70,67 @@ void print_registers(const char *label, uint64_t regs[32])
     }
 }
 
-static void diffs_push(void *addr, uint8_t oldv, uint8_t newv) {
-    if (g_diffs_len == g_diffs_cap) {
+static void diffs_push(void *addr, uint8_t oldv, uint8_t newv)
+{
+    if (g_diffs_len == g_diffs_cap)
+    {
         size_t ncap = g_diffs_cap ? g_diffs_cap * 2 : 256;
         g_diffs = realloc(g_diffs, ncap * sizeof(*g_diffs));
-        if (!g_diffs) { perror("realloc"); exit(1); }
+        if (!g_diffs)
+        {
+            perror("realloc");
+            exit(1);
+        }
         g_diffs_cap = ncap;
     }
-    g_diffs[g_diffs_len++] = (memdiff_t){ addr, oldv, newv };
+    g_diffs[g_diffs_len++] = (memdiff_t){addr, oldv, newv};
 }
 
-static void report_diffs(uint8_t expected) {
+static void report_diffs(uint8_t expected)
+{
     g_diffs_len = 0;
-    for (size_t i = 0; i < g_regions_len; i++) {
+    for (size_t i = 0; i < g_regions_len; i++)
+    {
         uint8_t *p = (uint8_t *)g_regions[i].addr;
         size_t n = g_regions[i].len;
-        for (size_t j = 0; j < n; j++) {
+        for (size_t j = 0; j < n; j++)
+        {
             uint8_t newv = p[j];
-            if (newv != expected) {
+            if (newv != expected)
+            {
                 void *absaddr = (uint8_t *)g_regions[i].addr + j;
                 diffs_push(absaddr, expected, newv);
             }
         }
     }
 
-    for (size_t k = 0; k < g_diffs_len; k++) {
+    for (size_t k = 0; k < g_diffs_len; k++)
+    {
         fprintf(stdout, "CHG: addr=%p old=0x%02x new=0x%02x\n",
                 g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
     }
 }
 
-static bool region_exists(void *addr) {
+static bool region_exists(void *addr)
+{
     for (size_t i = 0; i < g_regions_len; i++)
-        if (g_regions[i].addr == addr) return true;
+        if (g_regions[i].addr == addr)
+            return true;
     return false;
 }
 
-static void fill_regions(uint8_t byte) {
-    for (size_t i = 0; i < g_regions_len; i++) {
+static void fill_regions(uint8_t byte)
+{
+    for (size_t i = 0; i < g_regions_len; i++)
+    {
         memset(g_regions[i].addr, byte, g_regions[i].len);
     }
 }
 
-static void regions_push(void *addr, size_t len) {
-    if (g_regions_len < MAX_MAPPED_PAGES) {
+static void regions_push(void *addr, size_t len)
+{
+    if (g_regions_len < MAX_MAPPED_PAGES)
+    {
         g_regions[g_regions_len].addr = addr;
         g_regions[g_regions_len].len = len;
         g_regions_len++;
@@ -143,63 +139,79 @@ static void regions_push(void *addr, size_t len) {
 
 // Takes an arbitrary address (p, which caused the segfault) and rounds it down to the start of the containing page
 // Since mmap() only works at page-aligned addresses
-static inline void *page_align_down(void *p) {
+static inline void *page_align_down(void *p)
+{
     uintptr_t u = (uintptr_t)p;
     return (void *)(u & ~(uintptr_t)(page_size - 1));
 }
 // Maps two pages of memory (base and base + pagesize) starting at the faulting page
-static void map_two_pages(void *base) {
-    if (g_regions_len >= MAX_MAPPED_PAGES) return;
+static void map_two_pages(void *base)
+{
+    if (g_regions_len >= MAX_MAPPED_PAGES)
+        return;
 
-    if (!region_exists(base)) {
+    if (!region_exists(base))
+    {
         void *r = mmap(base, 2 * page_size,
                        PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,
                        -1, 0);
-        if (r == MAP_FAILED) {
+        if (r == MAP_FAILED)
+        {
             perror("mmap");
-        } else {
+        }
+        else
+        {
             regions_push(base, 2 * page_size);
         }
     }
 }
 
-/* ========= Unified runner ========= */
-static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
+static void run_until_quiet(int fill_mode, uint8_t fill_byte)
+{
     g_fault_addr = 0;
 
     int jump_rc = sigsetjmp(jump_buffer, 1);
 
-    if (jump_rc == 0) {
+    if (jump_rc == 0)
+    {
         run_sandbox(sandbox_ptr);
         // return true; // --> finished no faults
-    } else if (jump_rc == 1) {
+    }
+    else if (jump_rc == 1)
+    {
         // non-SEGV fault
         printf("Recovered from crash\n");
         // return true;
-    } else if (jump_rc == 2) {
+    }
+    else if (jump_rc == 2)
+    {
         // segv happened; map and retry
         void *base = page_align_down((void *)g_fault_addr);
         map_two_pages(base);
-        fill_regions(fill_byte); // loops through g_regions to map them 
+        fill_regions(fill_byte); // loops through g_regions to map them
         run_sandbox(sandbox_ptr);
         // return false;
-    } else if (jump_rc == 3) {
-        // threshold exceeded 
+    }
+    else if (jump_rc == 3)
+    {
+        // threshold exceeded
         fprintf(stdout, "[probe] threshold exceeded; proceeding anyway.\n");
         // return false;
-    } else if (jump_rc == 4) {
-        // SIGSEGV occured in sandbox memory; abort
-	printf("SEGSEGV occured in sandbox memory");
+    }
+    else if (jump_rc == 4)
+    {
+        // SIGSEGV occured in sandbox memory or kernel region; abort
+        printf("SEGSEGV occured in sandbox memory");
     }
 }
 
 int main()
 {
-//   srand((unsigned)time(NULL));  // Seed randomness
-//   for (int i = 0; i < BUFFER_SIZE; i++) {
-//       fuzz_buffer[i] = rand32();
-//   }
+    //   srand((unsigned)time(NULL));  // Seed randomness
+    //   for (int i = 0; i < BUFFER_SIZE; i++) {
+    //       fuzz_buffer[i] = rand32();
+    //   }
 
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     setup_signal_handlers();
@@ -209,32 +221,35 @@ int main()
 
     // for (size_t i = 0; i < (size_t)BUFFER_SIZE; i++)
     // for (size_t i = 0; i < fuzz_buffer_len; i++)
-    for (size_t i = 0; i < sizeof(fuzz_buffer)/sizeof(uint32_t); i++)
+    for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
         // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer3[i]);
-        
-        // loops twice to check for differing results
-//        for (size_t x = 0; x < 2; x++)
-//        {
 
-	    // prepare sandbox
+        // loops twice to check for differing results
+        //        for (size_t x = 0; x < 2; x++)
+        //        {
+
+        // prepare sandbox
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
-	inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-        
-	g_faults_this_run = 0;
+        inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+        g_faults_this_run = 0;
         g_regions_len = 0;
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
-        fprintf(stdout,"jump_rc: %d\n", jump_rc);
-	if (jump_rc == 0) {
+        fprintf(stdout, "jump_rc: %d\n", jump_rc);
+        if (jump_rc == 0)
+        {
             run_sandbox(sandbox_ptr);
             continue; // no faults raised
-        } else if (jump_rc == 1 || jump_rc == 4) {
+        }
+        else if (jump_rc == 1 || jump_rc == 4)
+        {
             // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
-	    continue; 
+            continue;
         }
 
         // SIGSEGV if code reaches here
@@ -245,19 +260,23 @@ int main()
 
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
-	inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-	
-	printf("g_faults_this_run = %d\n", g_faults_this_run);
-	printf("g_fault_addr = 0x%\n", g_fault_addr);
-	// g_regions: array of mapped regions
-	if (g_regions != NULL) {
-    		printf("Mapped regions:\n");
-   		for (size_t i = 0; i < g_regions_len; i++) {
-        		printf("  region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-    		}
-	} else {
-    		printf("g_regions is NULL\n");
-	}
+        inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+        printf("g_faults_this_run = %d\n", g_faults_this_run);
+        printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
+
+        if (g_regions != NULL)
+        {
+            printf("Mapped regions:\n");
+            for (size_t i = 0; i < g_regions_len; i++)
+            {
+                printf("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+            }
+        }
+        else
+        {
+            printf("g_regions is NULL\n");
+        }
 
         run_until_quiet(1, 0xFF);
         report_diffs(0xFF);
@@ -266,4 +285,3 @@ int main()
     }
     return 0;
 }
-

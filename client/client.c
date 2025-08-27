@@ -14,7 +14,6 @@ extern const char *reg_names[32];
 extern uint64_t temp_storage[];
 extern uint64_t xreg_output_data[];
 extern uint64_t freg_output_data[];
-extern size_t start_offset;
 extern void signal_trampoline(); // from assembly
 extern uint8_t *sandbox_ptr;
 
@@ -26,17 +25,16 @@ uint64_t regs_after[32];
 uint64_t fcsr_output_data;
 char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
-volatile sig_atomic_t g_faults_this_run = 0;
-volatile uintptr_t g_fault_addr = 0;
-mapped_region_t *g_regions = NULL;
-size_t g_regions_len = 0;
-size_t g_regions_cap = 0;
-size_t g_pagesize = 0;
+extern volatile uintptr_t g_fault_addr;
+extern volatile sig_atomic_t g_faults_this_run;
 
 size_t page_size = 4096;
 size_t sandbox_pages = 1; // 4 KB sandbox
 size_t guard_pages = 16;  // 64 KB guards (tunable)
+size_t start_offset = 0x20;
 #define MAX_FAULTS_PER_RUN 10
+#define USER_VA_MAX (1ULL << 47) // 0x8000_000000000
+
 /*
 Code for client (RISC-V board)
 Aim:
@@ -131,21 +129,25 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     {
         xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
     }
-    
+
     // === Save floating-point registers if available ===
     union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
     // Check if FP state is valid (might need a different check than NULL)
-    if (uc->uc_mcontext.__fpregs.__d.__f[0] != 0) {  // or some other appropriate check
-        for (int i = 0; i < 32; i++) {
+    if (uc->uc_mcontext.__fpregs.__d.__f[0] != 0)
+    { // or some other appropriate check
+        for (int i = 0; i < 32; i++)
+        {
             freg_output_data[i] = fpstate->__d.__f[i];
         }
 
         fcsr_output_data = fpstate->__d.__fcsr;
-    } else {
+    }
+    else
+    {
         memset(freg_output_data, 0, sizeof(uint64_t) * 32);
         fcsr_output_data = 0;
     }
-    
+
     // printf("sp: %ld\n", uc->uc_mcontext.__gregs[1]);
     // printf("gp: %ld\n", uc->uc_mcontext.__gregs[2]);
     // printf("tp: %ld\n", uc->uc_mcontext.__gregs[3]);
@@ -160,12 +162,15 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     case SIGSEGV:
         printf("Caught SIGSEGV (Segmentation Fault)\n");
         printf("Faulting address: %p\n", fault_addr);
-        if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size)) {
-           printf("SIGSEGV fault occured in sandbox page. ERROR!! Returning");
-	  siglongjmp(jump_buffer, 4);
-	 break; 
+        if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
+        {
+            // SIGSEGV occured in sandbox page or kernel. Abort
+            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning");
+            siglongjmp(jump_buffer, 4);
+            break;
         }
-        if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
+        if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
+        {
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
         g_fault_addr = (uintptr_t)fault_addr;
