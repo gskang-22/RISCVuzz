@@ -122,16 +122,6 @@ static bool region_exists(void *addr)
     return false;
 }
 
-static void regions_push(void *addr, size_t len)
-{
-    if (g_regions_len < MAX_MAPPED_PAGES)
-    {
-        g_regions[g_regions_len].addr = addr;
-        g_regions[g_regions_len].len = len;
-        g_regions_len++;
-    }
-}
-
 // Takes an arbitrary address (p, which caused the segfault) and rounds it down to the start of the containing page
 // Since mmap() only works at page-aligned addresses
 static inline void *page_align_down(void *p)
@@ -150,7 +140,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
     {
         void *r = mmap(base, 2 * page_size,
                        PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,
+                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_REPLACE,
                        -1, 0);
         if (r == MAP_FAILED)
         {
@@ -159,15 +149,25 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         }
         else
         {
-            regions_push(base, 2 * page_size);
-            memset(g_regions[g_regions_len - 1].addr, fill_byte, g_regions[g_regions_len - 1].len);
+            // add region to g_regions array
+            if (g_regions_len < MAX_MAPPED_PAGES)
+            {
+                g_regions[g_regions_len].addr = base;
+                g_regions[g_regions_len].len = 2 * page_size;
+                g_regions_len++;
+            }
+            // fill mapped regions with fill_byte
+            for (size_t i = 0; i < g_regions_len; i++)
+            {
+                memset(g_regions[i].addr, fill_byte, g_regions[i].len);
+            }
         }
     }
 }
 
 static void run_until_quiet(int fill_mode, uint8_t fill_byte)
 {
-    printf("running loop: %i", fill_byte);
+    printf("running loop: %i\n", fill_byte);
     g_fault_addr = 0;
 
     int jump_rc = sigsetjmp(jump_buffer, 1);
@@ -175,31 +175,16 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
     if (jump_rc == 0)
     {
         run_sandbox(sandbox_ptr);
-        // return true; // --> finished no faults
     }
-    // else if (jump_rc == 1)
-    // {
-    //     // non-SEGV fault
-    //     printf("Recovered from crash\n");
-    //     // return true;
-    // }
     else if (jump_rc == 2)
     {
         // segv happened; map and retry
         void *base = page_align_down((void *)g_fault_addr);
         map_two_pages(base, fill_byte);
         run_sandbox(sandbox_ptr);
-        // return false;
     }
-    // else if (jump_rc == 3)
-    // {
-    //     // threshold exceeded
-    //     // return false;
-    // }
-    // else if (jump_rc == 4)
-    // {
-    //     // SIGSEGV occured in sandbox memory or kernel region; abort
-    // }
+    // if jump_rc == 1 || 3 || 4, fall through and return
+    return;
 }
 
 int main()
@@ -234,6 +219,10 @@ int main()
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
         g_faults_this_run = 0;
+        for (size_t i = 0; i < g_regions_len; i++)
+        {
+            munmap(g_regions[i].addr, g_regions[i].len);
+        }
         g_regions_len = 0;
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
@@ -252,17 +241,17 @@ int main()
         }
 
         // SIGSEGV if code reaches here
-        printf("Code raised sigsegv fault");
+        printf("Code raised sigsegv fault\n");
 
         run_until_quiet(1, 0x00);
         // report_diffs(0x00);
-return 0;
+        return 0;
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
         printf("g_faults_this_run = %d\n", g_faults_this_run);
-        printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
+        // printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
 
         // if (g_regions != NULL)
         // {

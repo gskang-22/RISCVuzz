@@ -186,6 +186,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         }
         g_fault_addr = (uintptr_t)fault_addr;
         g_faults_this_run++;
+        printf("g_faults_this_run: %d\n", g_faults_this_run);
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
     default:
         printf("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
