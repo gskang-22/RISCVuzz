@@ -188,6 +188,9 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte) {
         // threshold exceeded 
         fprintf(stdout, "[probe] threshold exceeded; proceeding anyway.\n");
         // return false;
+    } else if (jump_rc == 4) {
+        // SIGSEGV occured in sandbox memory; abort
+	printf("SEGSEGV occured in sandbox memory");
     }
 }
 
@@ -219,17 +222,19 @@ int main()
 	    // prepare sandbox
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
-	    inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
-        g_faults_this_run = 0;
+	inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+        
+	g_faults_this_run = 0;
         g_regions_len = 0;
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
-        if (jump_rc == 0) {
+        fprintf(stdout,"jump_rc: %d\n", jump_rc);
+	if (jump_rc == 0) {
             run_sandbox(sandbox_ptr);
             continue; // no faults raised
-        } else if (jump_rc == 1) {
-            continue; // non SIGSEGV fault raised
+        } else if (jump_rc == 1 || jump_rc == 4) {
+            // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
+	    continue; 
         }
 
         // SIGSEGV if code reaches here
@@ -240,7 +245,19 @@ int main()
 
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
-	    inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+	inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+	
+	printf("g_faults_this_run = %d\n", g_faults_this_run);
+	printf("g_fault_addr = 0x%\n", g_fault_addr);
+	// g_regions: array of mapped regions
+	if (g_regions != NULL) {
+    		printf("Mapped regions:\n");
+   		for (size_t i = 0; i < g_regions_len; i++) {
+        		printf("  region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+    		}
+	} else {
+    		printf("g_regions is NULL\n");
+	}
 
         run_until_quiet(1, 0xFF);
         report_diffs(0xFF);

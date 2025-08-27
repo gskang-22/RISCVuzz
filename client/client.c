@@ -16,7 +16,7 @@ extern uint64_t xreg_output_data[];
 extern uint64_t freg_output_data[];
 extern size_t start_offset;
 extern void signal_trampoline(); // from assembly
-extern sandbox_ptr;
+extern uint8_t *sandbox_ptr;
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
@@ -160,8 +160,10 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     case SIGSEGV:
         printf("Caught SIGSEGV (Segmentation Fault)\n");
         printf("Faulting address: %p\n", fault_addr);
-        if (fault_addr >= sandbox_ptr && fault_addr < (sandbox_ptr + page_size)) {
-            
+        if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size)) {
+           printf("SIGSEGV fault occured in sandbox page. ERROR!! Returning");
+	  siglongjmp(jump_buffer, 4);
+	 break; 
         }
         if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
             siglongjmp(jump_buffer, 3); // threshold exceeded
