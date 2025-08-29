@@ -140,7 +140,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
     {
         void *r = mmap(base, 2 * page_size,
                        PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_REPLACE,
+                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, // MAP_FIXED_NOREPLACE
                        -1, 0);
         printf("f: %p\n", r);
         if (r == MAP_FAILED)
@@ -161,11 +161,28 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                 g_regions[g_regions_len].len = 2 * page_size;
                 g_regions_len++;
             }
-            // // fill mapped regions with fill_byte
-            // for (size_t i = 0; i < g_regions_len; i++)
-            // {
-            //     memset(g_regions[i].addr, fill_byte, g_regions[i].len);
-            // }
+            // fill region with fill_byte
+            memset(r, fill_byte, 2 * page_size);
+        }
+    }
+}
+
+// fills all pages in g_region with fill_byte
+static void fill_all_pages(uint8_t fill_byte) {
+    for (size_t i = 0; i < g_regions_len; i++)
+    {
+        memset(g_regions[i].addr, fill_byte, g_regions[i].len);
+    }
+}
+
+// Unmap all mapped regions and reset g_regions_len
+static void unmap_all_regions(void)
+{
+    for (size_t i = 0; i < g_regions_len; i++)
+    {
+        if (munmap(g_regions[i].addr, g_regions[i].len) != 0)
+        {
+            perror("munmap failed");
         }
     }
 }
@@ -223,11 +240,9 @@ int main()
         instrs[0] = fuzz_buffer[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
+        // unmap using munmap
+        unmap_all_regions(); // unmap g_regions
         g_faults_this_run = 0;
-        for (size_t i = 0; i < g_regions_len; i++)
-        {
-            munmap(g_regions[i].addr, g_regions[i].len);
-        }
         g_regions_len = 0;
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
@@ -250,7 +265,7 @@ int main()
 
         run_until_quiet(1, 0x00);
         // report_diffs(0x00);
-        return 0;
+
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
@@ -258,21 +273,19 @@ int main()
         printf("g_faults_this_run = %d\n", g_faults_this_run);
         // printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
 
-        // if (g_regions != NULL)
-        // {
+
         //     printf("Mapped regions:\n");
         //     for (size_t i = 0; i < g_regions_len; i++)
         //     {
         //         printf("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
         //     }
         // }
-        // else
-        // {
-        //     printf("g_regions is NULL\n");
-        // }
 
         // run_until_quiet(1, 0xFF);
         // report_diffs(0xFF);
     }
+
+    free_executable_buffer(sandbox_ptr); // unmap sandbox region
+    unmap_all_regions(); // unmap g_regions
     return 0;
 }

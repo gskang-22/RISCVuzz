@@ -70,6 +70,18 @@ uint8_t *allocate_executable_buffer()
     return sandbox;
 }
 
+void free_executable_buffer(uint8_t *sandbox) {
+    size_t total_pages = sandbox_pages + 2 * guard_pages;
+    size_t total_size = total_pages * page_size;
+
+    // compute back the original base (buf)
+    void *buf = sandbox - guard_pages * page_size;
+
+    if (munmap(buf, total_size) != 0) {
+        perror("munmap failed");
+    }
+}
+
 void prepare_sandbox(uint8_t *sandbox_ptr)
 {
     // Reset sandbox to PROT_NONE after each run
