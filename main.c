@@ -151,9 +151,9 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         else
         {
             printf("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
-                (unsigned long)(uintptr_t)base,
-                (unsigned long)(uintptr_t)r);
-                       
+                   (unsigned long)(uintptr_t)base,
+                   (unsigned long)(uintptr_t)r);
+
             // add region to g_regions array
             if (g_regions_len < MAX_MAPPED_PAGES)
             {
@@ -168,7 +168,8 @@ static void map_two_pages(void *base, uint8_t fill_byte)
 }
 
 // fills all pages in g_region with fill_byte
-static void fill_all_pages(uint8_t fill_byte) {
+static void fill_all_pages(uint8_t fill_byte)
+{
     for (size_t i = 0; i < g_regions_len; i++)
     {
         memset(g_regions[i].addr, fill_byte, g_regions[i].len);
@@ -189,24 +190,35 @@ static void unmap_all_regions(void)
 
 static void run_until_quiet(int fill_mode, uint8_t fill_byte)
 {
-    printf("running loop: %i\n", fill_byte);
     g_fault_addr = 0;
 
-    int jump_rc = sigsetjmp(jump_buffer, 1);
+    while (1)
+    {
+        int jump_rc = sigsetjmp(jump_buffer, 1);
+        printf("jump_rc: %i\n", jump_rc);
 
-    if (jump_rc == 0)
-    {
-        run_sandbox(sandbox_ptr);
+        int jump_rc = sigsetjmp(jump_buffer, 1);
+
+        if (jump_rc == 0)
+        {
+            run_sandbox(sandbox_ptr);
+            break;
+        }
+        else if (jump_rc == 2)
+        {
+            // segv happened; map and retry
+            void *base = page_align_down((void *)g_fault_addr);
+            map_two_pages(base, fill_byte);
+            // run_sandbox(sandbox_ptr);
+            continue;
+        }
+        else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4)
+        {
+            printf("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
+            break;
+        }
     }
-    else if (jump_rc == 2)
-    {
-        // segv happened; map and retry
-        void *base = page_align_down((void *)g_fault_addr);
-        map_two_pages(base, fill_byte);
-        run_sandbox(sandbox_ptr);
-    }
-    // if jump_rc == 1 || 3 || 4, fall through and return
-    return;
+    printf("run_until_quiet finished\n");
 }
 
 int main()
@@ -273,7 +285,6 @@ int main()
         printf("g_faults_this_run = %d\n", g_faults_this_run);
         // printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
 
-
         //     printf("Mapped regions:\n");
         //     for (size_t i = 0; i < g_regions_len; i++)
         //     {
@@ -286,6 +297,6 @@ int main()
     }
 
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
-    unmap_all_regions(); // unmap g_regions
+    unmap_all_regions();                 // unmap g_regions
     return 0;
 }
