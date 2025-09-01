@@ -11,8 +11,9 @@ const rl = readline.createInterface({
 rl.on('line', (line) => {
     try {
         const inst = new Instruction(line.trim());
-        console.log(JSON.stringify({ asm: inst.asm, hex: inst.hex }));
-    } catch (e) {
-        console.log(JSON.stringify({ error: e.toString() }));
+        // console.log(JSON.stringify({ asm: inst.asm, hex: inst.hex }));
+        console.log(JSON.stringify({hex: inst.hex }));
+    } catch (err) {
+        console.log(JSON.stringify({ error: err.message || String(err) }));
     }
 });

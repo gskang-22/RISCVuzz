@@ -53,3 +53,10 @@ export const configDefault = Object.freeze(
     Object.entries(configFields).map(
       ([k,v]) => [k, (v.default ?? v.opts[0])]
 )));
+
+import fs from 'fs';
+// Read JSON file once
+const cfg = JSON.parse(fs.readFileSync("/home/szekang/Documents/RISCVuzz/config.json", "utf8"));
+// Export cfg so other files can use it
+export default cfg;
+

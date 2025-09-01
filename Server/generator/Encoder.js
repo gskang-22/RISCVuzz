@@ -10,12 +10,8 @@ import { BASE, XLEN_MASK, FIELDS, OPCODE, ISA,
   REGISTER, FLOAT_REGISTER, FLOAT_ROUNDING_MODE, CSR
 } from './Constants.js'
 
-import { GPRs, FREGs, VREGs, SPECIAL_GPRS, SPECIAL_FPRS, SPECIAL_VREGS, 
-  SPECIAL_SIMMS, SPECIAL_UIMMS, GPR_SPECIAL, FPR_SPECIAL, VREG_SPECIAL, 
-  IMM_SPECIAL, FLIP_PROBABILITY, ENDIAN_PROBABILITY
-} from './Constants.js'
-
 import { COPTS_ISA } from './Config.js'
+import cfg from './Config.js'
 
 import { convertBase } from './Instruction.js'
 
@@ -1039,8 +1035,8 @@ if (num < 0) {
 // Random signed immediate generator
 function rand_simm(bits) {
   let val;
-  if (Math.random() < IMM_SPECIAL) {
-    val = SPECIAL_SIMMS[Math.floor(Math.random() * SPECIAL_SIMMS.length)];
+  if (Math.random() < cfg.IMM_SPECIAL) {
+    val = cfg.SPECIAL_SIMMS[Math.floor(Math.random() * cfg.SPECIAL_SIMMS.length)];
   } else {
     const lo = -(1 << (bits - 1));
     const hi = (1 << (bits - 1)) - 1;
@@ -1052,8 +1048,8 @@ function rand_simm(bits) {
 // Random unsigned immediate generator
 function rand_uimm(bits) {
   let val;
-  if (Math.random() < IMM_SPECIAL) {
-    val = SPECIAL_UIMMS[Math.floor(Math.random() * SPECIAL_UIMMS.length)];
+  if (Math.random() < cfg.IMM_SPECIAL) {
+    val = cfg.SPECIAL_UIMMS[Math.floor(Math.random() * cfg.SPECIAL_UIMMS.length)];
   } else {
     val = Math.floor(Math.random() * (1 << bits));
   }
@@ -1063,13 +1059,12 @@ function rand_uimm(bits) {
 // Random general-purpose register generator (5-bit binary)
 function pick_gpr({ avoidZero = false, exclude = [] } = {}) {
   let val;
-  if (Math.random() < GPR_SPECIAL) {
-    val = SPECIAL_GPRS[Math.floor(Math.random() * SPECIAL_GPRS.length)];
+  if (Math.random() < cfg.GPR_SPECIAL) {
+    // Pick from special GPRs
+    val = cfg.SPECIAL_GPRS[Math.floor(Math.random() * cfg.SPECIAL_GPRS.length)];
   } else {
-    const baseExclude = new Set([9, ...exclude]);
-    if (avoidZero) baseExclude.add(0);
-    const candidates = Array.from({ length: 32 }, (_, i) => i).filter(r => !baseExclude.has(r));
-    val = candidates[Math.floor(Math.random() * candidates.length)];
+    // Pick from all GPRs in cfg.GPRs
+    val = cfg.GPRs[Math.floor(Math.random() * cfg.GPRs.length)];
   }
   return to_bin(val, 5);
 }
@@ -1077,10 +1072,10 @@ function pick_gpr({ avoidZero = false, exclude = [] } = {}) {
 // Random floating-point register generator (5-bit binary)
 function pick_fpr() {
   let val;
-  if (Math.random() < FPR_SPECIAL) {
-    val = SPECIAL_FPRS[Math.floor(Math.random() * SPECIAL_FPRS.length)]
+  if (Math.random() < cfg.FPR_SPECIAL) {
+    val = cfg.SPECIAL_FPRS[Math.floor(Math.random() * cfg.SPECIAL_FPRS.length)]
   } else {
-    val = FREGs[Math.floor(Math.random() * FREGs.length)];
+    val = cfg.FREGs[Math.floor(Math.random() * cfg.FREGs.length)];
   }
   return to_bin(val, 5);
 }
@@ -1088,12 +1083,12 @@ function pick_fpr() {
 // Random vector register generator (5-bit binary)
 function pick_vreg() {
   let val;
-  if (Math.random() < VREG_SPECIAL) {
+  if (Math.random() < cfg.VREG_SPECIAL) {
     // Pick a special vector register
-    val = SPECIAL_VREGS[Math.floor(Math.random() * SPECIAL_VREGS.length)];
+    val = cfg.SPECIAL_VREGS[Math.floor(Math.random() * cfg.SPECIAL_VREGS.length)];
   } else {
     // Pick a normal vector register
-    val = VREGs[Math.floor(Math.random() * VREGs.length)];
+    val = cfg.VREGs[Math.floor(Math.random() * cfg.VREGs.length)];
   }
   return to_bin(val, 5);
 }

@@ -6,27 +6,6 @@
  * Copyright (c) 2021-2022 LupLab @ UC Davis
  */
 
-export const GPRs = Array.from({ length: 32 }, (_, i) => i);
-export const FREGs = Array.from({ length: 32 }, (_, i) => i);
-export const VREGs = Array.from({ length: 32 }, (_, i) => i);
-
-// Special test registers / immediates
-export const SPECIAL_GPRS = [0, 1, 2, 31];   // x0, ra, sp, t6
-export const SPECIAL_FPRS = [0, 1, 31];      // f0, f1, f31
-export const SPECIAL_VREGS = [0, 1, 31];     
-export const SPECIAL_SIMMS = [0, 1, -1, (1 << 11) - 1, -(1 << 11)];
-export const SPECIAL_UIMMS = [0, 1, (1 << 12) - 1, (1 << 12), (1 << 10)];
-
-// Probabilities for picking special values
-export const GPR_SPECIAL = 0.2;
-export const FPR_SPECIAL = 0.2;
-export const VREG_SPECIAL = 0.3;
-export const IMM_SPECIAL = 0.875;
-
-// Probabilities for extra fuzzing behavior
-export const FLIP_PROBABILITY = 0.5;
-export const ENDIAN_PROBABILITY = 0.5;
-
 // Bases for parsing
 export const BASE = {
   bin: 2,
@@ -49,10 +28,10 @@ export const XLEN_MASK = {
 }
 
 // Width of a floating-point register
-// export const FLEN = {
-//   F: 32,
-//   D: 64
-// }
+export const FLEN = {
+  F: 32,
+  D: 64
+}
 
 // Encoding for floating-point register width
 export const FP_WIDTH = {

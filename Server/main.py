@@ -1,15 +1,10 @@
 import subprocess
 import json
+import random, time
 
-# Start Node.js process once
-node_proc = subprocess.Popen(
-    ['node', '/home/szekang/Documents/RISCVuzz/Server/generator/main.mjs'],
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    text=True
-)
 
-def call_instruction(input_str):
+
+def call_instruction(input_str, node_proc):
     # Send instruction to Node.js
     node_proc.stdin.write(input_str + "\n")
     node_proc.stdin.flush()
@@ -40,15 +35,37 @@ def call_rust_asm(asm_line: str) -> str:
     
     return result.stdout
 
-# Example usages
+def flip_bits(inst_word, cfg):
+    # With flip_prob chance, flip some bits
+    if random.random() >= cfg["FLIP_PROBABILITY"]:
+        return inst_word  # no flip
 
-# instructions = ["add", "fadd.s", "jal"]
-# for instr in instructions:
-#     result = call_instruction(instr)
-#     print("Input:", instr)
-#     print(result["asm"])
-#     print("0x" + result["hex"])
-#     print("---")
+    num_flips = random.randint(1, cfg["MAX_FLIPS"])  # how many bits to flip
+    bits_to_flip = random.sample(range(32), num_flips)  # pick unique bit positions
+    
+    mask = 0
+    for bit in bits_to_flip:
+        mask |= (1 << bit)
+    
+    flipped = inst_word ^ mask  # XOR flips the bits
+    return flipped
+
+def flip_endian_32(w):
+    b0 = (w & 0x000000FF) << 24
+    b1 = (w & 0x0000FF00) << 8
+    b2 = (w & 0x00FF0000) >> 8
+    b3 = (w & 0xFF000000) >> 24
+    return (b0 | b1 | b2 | b3) & 0xFFFFFFFF
+
+def check_flip(output, result, cfg):
+    if random.random() < cfg["FLIP_PROBABILITY"]:
+        # randomly flip bits, increasing number and randomness of instructions generated
+        result = flip_bits(result, cfg)
+        output.append("0x{:08x}".format(result & 0xffffffff))
+    if random.random() < cfg["ENDIAN_PROBABILITY"]:
+        # flip endianess of instruction
+        result = flip_endian_32(result)
+        output.append("0x{:08x}".format(result & 0xffffffff))
 
 BASE_INSTRUCTIONS = [
     "ADD", "SUB", "SLL", "XOR", "SRL", "SRA", "OR", "AND", "ADDI", "XORI",
@@ -108,13 +125,39 @@ VECTOR_INSTRUCTIONS = [
     "vwsub.wx", "vwsubu.vv", "vwsubu.vx", "vwsubu.wv", "vwsubu.wx", "vxor.vi", "vxor.vv", "vxor.vx", "vzext.vf2", "vzext.vf4", "vzext.vf8",
 ]
 
-for asm_input in VECTOR_INSTRUCTIONS:
-    print("input:" + asm_input)
-    output = call_rust_asm(asm_input)
-    print("output:" + output)
-print("-----------------------------------")
-for instr in BASE_INSTRUCTIONS:
-    result = call_instruction(instr)
-    print("Input:", instr)
-    # print(result["asm"]) // some instructions generated are syntactically wrong. so cannot decode 
-    print("0x" + result["hex"])
+def main():
+    # Start Node.js process once
+    node_proc = subprocess.Popen(
+        ['node', '/home/szekang/Documents/RISCVuzz/Server/generator/main.mjs'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    # open config file
+    with open("/home/szekang/Documents/RISCVuzz/config.json") as f:
+        cfg = json.load(f)
+
+    # generate fuzzing instructions for injection into sandbox
+    output = []
+    seed = int(time.time())
+    random.seed(seed)
+
+    for asm_input in VECTOR_INSTRUCTIONS:
+        print("Input:" + asm_input)
+        result = int(call_rust_asm(asm_input), 16)
+        output.append("0x{:08x}".format(result & 0xffffffff))
+        print("output:", "0x{:08x}".format(result))
+        check_flip(output, result, cfg)
+    print("-----------------------------------")
+    for asm_input in BASE_INSTRUCTIONS:
+        try:
+            print("Input:", asm_input)
+            result = int((call_instruction(asm_input, node_proc))["hex"], 16)
+            output.append("0x{:08x}".format(result & 0xffffffff))
+            print("output:", "0x{:08x}".format(result))
+            check_flip(output, result, cfg)
+        except RuntimeError as e:
+            print("Input:", asm_input, " -> Error:", e)
+
+if __name__ == "__main__":
+    main()
