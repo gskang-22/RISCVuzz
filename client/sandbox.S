@@ -209,7 +209,7 @@ reg_x2_init:
 reg_x3_init:
 	.dword  0xd5c1e2fb3cfa9478
 reg_x4_init:
-	.dword  0x0000000000000005
+	.dword  0x00000000000f0005
 reg_x5_init:
 	.dword  0x2f1ef2878a4061f2
 reg_x6_init:
