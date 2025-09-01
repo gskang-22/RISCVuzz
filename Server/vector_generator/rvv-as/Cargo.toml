@@ -1,0 +1,16 @@
+[package]
+name = "rvv-as"
+version = "0.2.1"
+edition = "2018"
+license = "MIT"
+authors = ["Linfeng Qian <thewawar@gmail.com>"]
+keywords = ["rvv", "riscv", "vector", "encode", "cli"]
+description = "Command line tool to encode RISC-V V extension (rvv) instructions"
+repository = "https://github.com/TheWaWaR/rvv-encoder"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "3.0.6", features = ["derive"] }
+rvv-encode = { version = "0.2.1", path = "../rvv-encode" }

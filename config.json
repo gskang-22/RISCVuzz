@@ -19,5 +19,16 @@
 
   "ENDIAN_PROBABILITY": 0.5,
   "FLIP_PROBABILITY": 0.5,
-  "MAX_FLIPS": 3
+  "MAX_FLIPS": 3,
+
+  "ZIMM10_BIAS": 0.7,
+  "VLMUL_PROBABILITIES": {
+    "Mf8": 0.21,
+    "Mf4": 0.20,
+    "M8": 0.20,
+    "Mf2": 0.15,
+    "M2": 0.10,
+    "M4": 0.08,
+    "M1": 0.06
+  }
 }

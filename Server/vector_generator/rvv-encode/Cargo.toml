@@ -1,0 +1,19 @@
+[package]
+name = "rvv-encode"
+version = "0.2.1"
+edition = "2018"
+license = "MIT"
+authors = ["Linfeng Qian <thewawar@gmail.com>"]
+keywords = ["rvv", "riscv", "vector", "encode"]
+description = "Library to encode RISC-V V extension (rvv) instructions"
+repository = "https://github.com/TheWaWaR/rvv-encoder"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pest = "2.1.0"
+pest_derive = "2.1.0"
+anyhow = "1.0.44"
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

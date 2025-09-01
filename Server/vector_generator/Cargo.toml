@@ -1,0 +1,2 @@
+[workspace]
+members = ["rvv-encode", "rvv-as"]
