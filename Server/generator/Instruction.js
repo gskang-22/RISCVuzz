@@ -107,15 +107,16 @@ export class Instruction {
       throw 'Invalid instruction (not in binary, hexadecimal, nor assembly)';
     }
 
+    // todo: revert code is compressed instructions are necessary
     // Decode binary instruction into assembly
-    this.#decodeAsm();
+    // this.#decodeAsm();
 
     // Determine hex string length (default to 8)
     let hexLength = 8;
-    // Compressed instructions - represent them with 4 hex digits
-    if (this.asm.startsWith('c.')) {
-      hexLength = 4;
-    }
+    // // Compressed instructions - represent them with 4 hex digits
+    // if (this.asm.startsWith('c.')) {
+    //   hexLength = 4;
+    // }
 
     // Perform bin to hex conversion
     this.hex = convertBase(this.bin, BASE.bin, BASE.hex, hexLength);

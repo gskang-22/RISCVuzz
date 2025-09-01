@@ -543,90 +543,90 @@ export const ISA_Q = {
 }
 
 // C instruction set
-// export const ISA_C = {
+export const ISA_C = {
 // Load and Store Instructions
 // Stack-Pointer Based Loads and Stores
-//   'c.lwsp':   { isa: 'C',  xlens: 0b111, fmt: 'CI-type', funct3: '010', rdRs1Mask: 0b10, rdRs1Excl: [0], uimm: true, immBits: [[5], [[4,2],[7,6]]], opcode: C_OPCODE.C2 },
-//   'c.ldsp':   { isa: 'C',  xlens: 0b110, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10, rdRs1Excl: [0], uimm: true, immBits: [[5], [[4,3],[8,6]]], opcode: C_OPCODE.C2 },
-//   'c.lqsp':   { isa: 'C',  xlens: 0b100, fmt: 'CI-type', funct3: '001', rdRs1Mask: 0b10, rdRs1Excl: [0], uimm: true, immBits: [[5], [4,[9,6]]],     opcode: C_OPCODE.C2 },
-//   'c.flwsp':  { isa: 'FC', xlens: 0b001, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10,                 uimm: true, immBits: [[5], [[4,2],[7,6]]], opcode: C_OPCODE.C2 },
-//   'c.fldsp':  { isa: 'DC', xlens: 0b011, fmt: 'CI-type', funct3: '001', rdRs1Mask: 0b10,                 uimm: true, immBits: [[5], [[4,3],[8,6]]], opcode: C_OPCODE.C2 },
+  'c.lwsp':   { isa: 'C',  xlens: 0b111, fmt: 'CI-type', funct3: '010', rdRs1Mask: 0b10, rdRs1Excl: [0], uimm: true, immBits: [[5], [[4,2],[7,6]]], opcode: C_OPCODE.C2 },
+  'c.ldsp':   { isa: 'C',  xlens: 0b110, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10, rdRs1Excl: [0], uimm: true, immBits: [[5], [[4,3],[8,6]]], opcode: C_OPCODE.C2 },
+  'c.lqsp':   { isa: 'C',  xlens: 0b100, fmt: 'CI-type', funct3: '001', rdRs1Mask: 0b10, rdRs1Excl: [0], uimm: true, immBits: [[5], [4,[9,6]]],     opcode: C_OPCODE.C2 },
+  'c.flwsp':  { isa: 'FC', xlens: 0b001, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10,                 uimm: true, immBits: [[5], [[4,2],[7,6]]], opcode: C_OPCODE.C2 },
+  'c.fldsp':  { isa: 'DC', xlens: 0b011, fmt: 'CI-type', funct3: '001', rdRs1Mask: 0b10,                 uimm: true, immBits: [[5], [[4,3],[8,6]]], opcode: C_OPCODE.C2 },
 
-//   'c.swsp':   { isa: 'C',  xlens: 0b111, fmt: 'CSS-type', funct3: '110', uimm: true, immBits: [[5,2],[7,6]], opcode: C_OPCODE.C2 },
-//   'c.sdsp':   { isa: 'C',  xlens: 0b110, fmt: 'CSS-type', funct3: '111', uimm: true, immBits: [[5,3],[8,6]], opcode: C_OPCODE.C2 },
-//   'c.sqsp':   { isa: 'C',  xlens: 0b100, fmt: 'CSS-type', funct3: '101', uimm: true, immBits: [[5,4],[9,6]], opcode: C_OPCODE.C2 },
-//   'c.fswsp':  { isa: 'FC', xlens: 0b001, fmt: 'CSS-type', funct3: '111', uimm: true, immBits: [[5,2],[7,6]], opcode: C_OPCODE.C2 },
-//   'c.fsdsp':  { isa: 'DC', xlens: 0b011, fmt: 'CSS-type', funct3: '101', uimm: true, immBits: [[5,3],[8,6]], opcode: C_OPCODE.C2 },
+  'c.swsp':   { isa: 'C',  xlens: 0b111, fmt: 'CSS-type', funct3: '110', uimm: true, immBits: [[5,2],[7,6]], opcode: C_OPCODE.C2 },
+  'c.sdsp':   { isa: 'C',  xlens: 0b110, fmt: 'CSS-type', funct3: '111', uimm: true, immBits: [[5,3],[8,6]], opcode: C_OPCODE.C2 },
+  'c.sqsp':   { isa: 'C',  xlens: 0b100, fmt: 'CSS-type', funct3: '101', uimm: true, immBits: [[5,4],[9,6]], opcode: C_OPCODE.C2 },
+  'c.fswsp':  { isa: 'FC', xlens: 0b001, fmt: 'CSS-type', funct3: '111', uimm: true, immBits: [[5,2],[7,6]], opcode: C_OPCODE.C2 },
+  'c.fsdsp':  { isa: 'DC', xlens: 0b011, fmt: 'CSS-type', funct3: '101', uimm: true, immBits: [[5,3],[8,6]], opcode: C_OPCODE.C2 },
 
-//   // Register Based Loads and Stores
-//   'c.lw':     { isa: 'C',  xlens: 0b111, fmt: 'CL-type', funct3: '010', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
-//   'c.ld':     { isa: 'C',  xlens: 0b110, fmt: 'CL-type', funct3: '011', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
-//   'c.lq':     { isa: 'C',  xlens: 0b100, fmt: 'CL-type', funct3: '001', uimm: true, immBits: [[[5,4],8], [[7,6]]], opcode: C_OPCODE.C0 },
-//   'c.flw':    { isa: 'FC', xlens: 0b001, fmt: 'CL-type', funct3: '011', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
-//   'c.fld':    { isa: 'DC', xlens: 0b011, fmt: 'CL-type', funct3: '001', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
+  // Register Based Loads and Stores
+  'c.lw':     { isa: 'C',  xlens: 0b111, fmt: 'CL-type', funct3: '010', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
+  'c.ld':     { isa: 'C',  xlens: 0b110, fmt: 'CL-type', funct3: '011', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
+  'c.lq':     { isa: 'C',  xlens: 0b100, fmt: 'CL-type', funct3: '001', uimm: true, immBits: [[[5,4],8], [[7,6]]], opcode: C_OPCODE.C0 },
+  'c.flw':    { isa: 'FC', xlens: 0b001, fmt: 'CL-type', funct3: '011', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
+  'c.fld':    { isa: 'DC', xlens: 0b011, fmt: 'CL-type', funct3: '001', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
 
-//   'c.sw':     { isa: 'C',  xlens: 0b111, fmt: 'CS-type', funct3: '110', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
-//   'c.sd':     { isa: 'C',  xlens: 0b110, fmt: 'CS-type', funct3: '111', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
-//   'c.sq':     { isa: 'C',  xlens: 0b100, fmt: 'CS-type', funct3: '101', uimm: true, immBits: [[[5,4],8], [[7,6]]], opcode: C_OPCODE.C0 },
-//   'c.fsw':    { isa: 'FC', xlens: 0b001, fmt: 'CS-type', funct3: '111', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
-//   'c.fsd':    { isa: 'DC', xlens: 0b011, fmt: 'CS-type', funct3: '101', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
+  'c.sw':     { isa: 'C',  xlens: 0b111, fmt: 'CS-type', funct3: '110', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
+  'c.sd':     { isa: 'C',  xlens: 0b110, fmt: 'CS-type', funct3: '111', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
+  'c.sq':     { isa: 'C',  xlens: 0b100, fmt: 'CS-type', funct3: '101', uimm: true, immBits: [[[5,4],8], [[7,6]]], opcode: C_OPCODE.C0 },
+  'c.fsw':    { isa: 'FC', xlens: 0b001, fmt: 'CS-type', funct3: '111', uimm: true, immBits: [[[5,3]],   [2,6]],   opcode: C_OPCODE.C0 },
+  'c.fsd':    { isa: 'DC', xlens: 0b011, fmt: 'CS-type', funct3: '101', uimm: true, immBits: [[[5,3]],   [[7,6]]], opcode: C_OPCODE.C0 },
 
-// // Control Transfer Instructions
-//   'c.j':      { isa: 'C', xlens: 0b101, fmt: 'CJ-type', funct3: '101', immBits: [11,4,[9,8],10,6,7,[3,1],5], opcode: C_OPCODE.C1 },
-//   'c.jal':    { isa: 'C', xlens: 0b001, fmt: 'CJ-type', funct3: '001', immBits: [11,4,[9,8],10,6,7,[3,1],5], opcode: C_OPCODE.C1 },
+// Control Transfer Instructions
+  'c.j':      { isa: 'C', xlens: 0b101, fmt: 'CJ-type', funct3: '101', immBits: [11,4,[9,8],10,6,7,[3,1],5], opcode: C_OPCODE.C1 },
+  'c.jal':    { isa: 'C', xlens: 0b001, fmt: 'CJ-type', funct3: '001', immBits: [11,4,[9,8],10,6,7,[3,1],5], opcode: C_OPCODE.C1 },
 
-//   'c.jr':     { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1000', rdRs1Mask: 0b01, rdRs1Excl: [0], rs2Val: 0, opcode: C_OPCODE.C2 },
-//   'c.jalr':   { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b01, rdRs1Excl: [0], rs2Val: 0, opcode: C_OPCODE.C2 },
+  'c.jr':     { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1000', rdRs1Mask: 0b01, rdRs1Excl: [0], rs2Val: 0, opcode: C_OPCODE.C2 },
+  'c.jalr':   { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b01, rdRs1Excl: [0], rs2Val: 0, opcode: C_OPCODE.C2 },
 
-//   'c.beqz':   { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '110', immBits: [[8,[4,3]], [[7,6],[2,1],5]], opcode: C_OPCODE.C1 },
-//   'c.bnez':   { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '111', immBits: [[8,[4,3]], [[7,6],[2,1],5]], opcode: C_OPCODE.C1 },
+  'c.beqz':   { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '110', immBits: [[8,[4,3]], [[7,6],[2,1],5]], opcode: C_OPCODE.C1 },
+  'c.bnez':   { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '111', immBits: [[8,[4,3]], [[7,6],[2,1],5]], opcode: C_OPCODE.C1 },
 
-// // Integer Computational Instructions
-//   // Integer Constant-Generator Instructions
-//   'c.li':       { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '010', rdRs1Mask: 0b10, rdRs1Excl: [0],                immBits: [[5], [[4,0]]],                                   opcode: C_OPCODE.C1 },
-//   'c.lui':      { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10, rdRs1Excl: [0,2], nzimm: true, immBits: [[5], [[4,0]]], immBitsLabels: [[17], [[16,12]]], opcode: C_OPCODE.C1 },
+// Integer Computational Instructions
+  // Integer Constant-Generator Instructions
+  'c.li':       { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '010', rdRs1Mask: 0b10, rdRs1Excl: [0],                immBits: [[5], [[4,0]]],                                   opcode: C_OPCODE.C1 },
+  'c.lui':      { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10, rdRs1Excl: [0,2], nzimm: true, immBits: [[5], [[4,0]]], immBitsLabels: [[17], [[16,12]]], opcode: C_OPCODE.C1 },
 
-//   // Integer Register-Immediate Operations
-//   'c.addi':     { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], nzimm: true,             immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C1 },
-//   'c.addiw':    { isa: 'C', xlens: 0b110, fmt: 'CI-type', funct3: '001', rdRs1Mask: 0b11, rdRs1Excl: [0],                          immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C1 },
-//   'c.addi16sp': { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b00, rdRs1Val: 2,    nzimm: true,             immBits: [[9], [4,6,[8,7],5]], opcode: C_OPCODE.C1 },
-//   'c.slli':     { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], nzimm: true, uimm: true, immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C2 },
-//   'c.slli64':   { isa: 'C', xlens: 0b100, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], immVal: 0,               immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C2 },
+  // Integer Register-Immediate Operations
+  'c.addi':     { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], nzimm: true,             immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C1 },
+  'c.addiw':    { isa: 'C', xlens: 0b110, fmt: 'CI-type', funct3: '001', rdRs1Mask: 0b11, rdRs1Excl: [0],                          immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C1 },
+  'c.addi16sp': { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b00, rdRs1Val: 2,    nzimm: true,             immBits: [[9], [4,6,[8,7],5]], opcode: C_OPCODE.C1 },
+  'c.slli':     { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], nzimm: true, uimm: true, immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C2 },
+  'c.slli64':   { isa: 'C', xlens: 0b100, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], immVal: 0,               immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C2 },
 
-//   'c.addi4spn': { isa: 'C', xlens: 0b111, fmt: 'CIW-type', funct3: '000', uimm: true, nzimm: true, immBits: [[5,4],[9,6],2,3], opcode: C_OPCODE.C0 },
+  'c.addi4spn': { isa: 'C', xlens: 0b111, fmt: 'CIW-type', funct3: '000', uimm: true, nzimm: true, immBits: [[5,4],[9,6],2,3], opcode: C_OPCODE.C0 },
 
-//   'c.srli':     { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '100', funct2: '00', nzimm: true, uimm: true, immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
-//   'c.srli64':   { isa: 'C', xlens: 0b100, fmt: 'CB-type', funct3: '100', funct2: '00', immVal: 0,               immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
-//   'c.srai':     { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '100', funct2: '01', nzimm: true, uimm: true, immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
-//   'c.srai64':   { isa: 'C', xlens: 0b100, fmt: 'CB-type', funct3: '100', funct2: '01', immVal: 0,               immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
-//   'c.andi':     { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '100', funct2: '10',                          immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
+  'c.srli':     { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '100', funct2: '00', nzimm: true, uimm: true, immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
+  'c.srli64':   { isa: 'C', xlens: 0b100, fmt: 'CB-type', funct3: '100', funct2: '00', immVal: 0,               immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
+  'c.srai':     { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '100', funct2: '01', nzimm: true, uimm: true, immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
+  'c.srai64':   { isa: 'C', xlens: 0b100, fmt: 'CB-type', funct3: '100', funct2: '01', immVal: 0,               immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
+  'c.andi':     { isa: 'C', xlens: 0b111, fmt: 'CB-type', funct3: '100', funct2: '10',                          immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
 
-//   // Integer Register-Register Operations
-//   'c.mv':     { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1000', rdRs1Mask: 0b10, rdRs1Excl: [0], rs2Excl: [0], opcode: C_OPCODE.C2 },
-//   'c.add':    { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b11, rdRs1Excl: [0], rs2Excl: [0], opcode: C_OPCODE.C2 },
+  // Integer Register-Register Operations
+  'c.mv':     { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1000', rdRs1Mask: 0b10, rdRs1Excl: [0], rs2Excl: [0], opcode: C_OPCODE.C2 },
+  'c.add':    { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b11, rdRs1Excl: [0], rs2Excl: [0], opcode: C_OPCODE.C2 },
 
-//   'c.and':    { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '11', opcode: C_OPCODE.C1 },
-//   'c.or':     { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '10', opcode: C_OPCODE.C1 },
-//   'c.xor':    { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '01', opcode: C_OPCODE.C1 },
-//   'c.sub':    { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '00', opcode: C_OPCODE.C1 },
-//   'c.subw':   { isa: 'C', xlens: 0b110, fmt: 'CA-type', funct6: '100111', funct2: '00', opcode: C_OPCODE.C1 },
-//   'c.addw':   { isa: 'C', xlens: 0b110, fmt: 'CA-type', funct6: '100111', funct2: '01', opcode: C_OPCODE.C1 },
+  'c.and':    { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '11', opcode: C_OPCODE.C1 },
+  'c.or':     { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '10', opcode: C_OPCODE.C1 },
+  'c.xor':    { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '01', opcode: C_OPCODE.C1 },
+  'c.sub':    { isa: 'C', xlens: 0b111, fmt: 'CA-type', funct6: '100011', funct2: '00', opcode: C_OPCODE.C1 },
+  'c.subw':   { isa: 'C', xlens: 0b110, fmt: 'CA-type', funct6: '100111', funct2: '00', opcode: C_OPCODE.C1 },
+  'c.addw':   { isa: 'C', xlens: 0b110, fmt: 'CA-type', funct6: '100111', funct2: '01', opcode: C_OPCODE.C1 },
 
-// // Other Instructions
-//   'c.nop':    { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b00, rdRs1Val: 0, immVal: 0, immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
+// Other Instructions
+  'c.nop':    { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b00, rdRs1Val: 0, immVal: 0, immBits: [[5], [[4,0]]], opcode: C_OPCODE.C1 },
 
-//   'c.ebreak': { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b00, rdRs1Val: 0, rs2Val: 0, opcode: C_OPCODE.C2 },
-// }
+  'c.ebreak': { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b00, rdRs1Val: 0, rs2Val: 0, opcode: C_OPCODE.C2 },
+}
 
-// // Privileged instruction set
-// export const ISA_Priv = {
-//   // Trap-Return Instructions
-//   sret: { isa: 'Priv', fmt: 'I-type', funct12: '000100000010', funct3: '000', opcode: OPCODE.SYSTEM },
-//   mret: { isa: 'Priv', fmt: 'I-type', funct12: '001100000010', funct3: '000', opcode: OPCODE.SYSTEM },
+// Privileged instruction set
+export const ISA_Priv = {
+  // Trap-Return Instructions
+  sret: { isa: 'Priv', fmt: 'I-type', funct12: '000100000010', funct3: '000', opcode: OPCODE.SYSTEM },
+  mret: { isa: 'Priv', fmt: 'I-type', funct12: '001100000010', funct3: '000', opcode: OPCODE.SYSTEM },
 
-//   // Interrupt-Management Instructions
-//   wfi: { isa: 'Priv', fmt: 'I-type', funct12: '000100000101', funct3: '000', opcode: OPCODE.SYSTEM },
-// }
+  // Interrupt-Management Instructions
+  wfi: { isa: 'Priv', fmt: 'I-type', funct12: '000100000101', funct3: '000', opcode: OPCODE.SYSTEM },
+}
 
 // ISA per opcode
 export const ISA_OP = {
