@@ -69,26 +69,81 @@ const VX_VF_TERNARY_INSTS: [&str; 20] = [
 ];
 
 #[derive(Deserialize, Debug)]
-struct Config { 
-    GPRs: Vec<u32>, 
-    FREGs: Vec<u32>, 
-    VREGs: Vec<u32>, 
-    SPECIAL_GPRS: Vec<u32>, 
-    SPECIAL_VREGS: Vec<u32>, 
-    SPECIAL_SIMMS: Vec<i32>, 
-    SPECIAL_UIMMS: Vec<u32>, 
-    GPR_SPECIAL: f64, 
-    VREG_SPECIAL: f64, 
-    IMM_SPECIAL: f64, 
-    ZIMM10_BIAS: f64,
-    VLMUL_PROBABILITIES: HashMap<String, f64>,
+pub struct Config { 
+    pub GPRs: Vec<u32>, 
+    pub FREGs: Vec<u32>, 
+    pub VREGs: Vec<u32>, 
+    pub SPECIAL_GPRS: Vec<u32>, 
+    pub SPECIAL_VREGS: Vec<u32>, 
+    pub SPECIAL_SIMMS: Vec<i32>, 
+    pub SPECIAL_UIMMS: Vec<u32>, 
+    pub GPR_SPECIAL: f64, 
+    pub VREG_SPECIAL: f64, 
+    pub IMM_SPECIAL: f64, 
+    pub ZIMM10_BIAS: f64,
+    pub VLMUL_PROBABILITIES: HashMap<String, f64>,
 }
 
+impl Config {
+    pub fn from_cfg_map(cfg: &HashMap<String, String>) -> Self {
+        fn parse_vec_u32(s: &str) -> Vec<u32> {
+            s.split(',').filter_map(|x| x.trim().parse::<u32>().ok()).collect()
+        }
+        fn parse_vec_i32(s: &str) -> Vec<i32> {
+            s.split(',').filter_map(|x| x.trim().parse::<i32>().ok()).collect()
+        }
+        fn parse_f64(s: &str) -> f64 { s.parse::<f64>().unwrap_or(0.0) }
 
-fn load_config() -> Config {
-    let data = fs::read_to_string("/home/szekang/Documents/RISCVuzz/config.json").expect("config.json not found");
-    serde_json::from_str(&data).expect("Failed to parse config.json")
+        // Build VLMUL_PROBABILITIES
+        let mut vlmul = HashMap::new();
+        for (k, v) in cfg.iter() {
+            if k.starts_with("VLMUL_PROBABILITIES.") {
+                let subkey = k["VLMUL_PROBABILITIES.".len()..].to_string();
+                vlmul.insert(subkey, parse_f64(v));
+            }
+        }
+
+        Self {
+            GPRs: cfg.get("GPRs").map_or(vec![], |v| parse_vec_u32(v)),
+            FREGs: cfg.get("FREGs").map_or(vec![], |v| parse_vec_u32(v)),
+            VREGs: cfg.get("VREGs").map_or(vec![], |v| parse_vec_u32(v)),
+            SPECIAL_GPRS: cfg.get("SPECIAL_GPRS").map_or(vec![], |v| parse_vec_u32(v)),
+            SPECIAL_VREGS: cfg.get("SPECIAL_VREGS").map_or(vec![], |v| parse_vec_u32(v)),
+            SPECIAL_SIMMS: cfg.get("SPECIAL_SIMMS").map_or(vec![], |v| parse_vec_i32(v)),
+            SPECIAL_UIMMS: cfg.get("SPECIAL_UIMMS").map_or(vec![], |v| parse_vec_u32(v)),
+            GPR_SPECIAL: cfg.get("GPR_SPECIAL").map_or(0.0, |v| parse_f64(v)),
+            VREG_SPECIAL: cfg.get("VREG_SPECIAL").map_or(0.0, |v| parse_f64(v)),
+            IMM_SPECIAL: cfg.get("IMM_SPECIAL").map_or(0.0, |v| parse_f64(v)),
+            ZIMM10_BIAS: cfg.get("ZIMM10_BIAS").map_or(0.0, |v| parse_f64(v)),
+            VLMUL_PROBABILITIES: vlmul,
+        }
+    }
+
+    // Optional helper to load directly from a CFG file
+    pub fn from_cfg_file(path: &str) -> Self {
+        let content = fs::read_to_string(path).expect("Failed to read CFG file");
+        let mut cfg_map = HashMap::new();
+
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') { continue; }
+            let (key, value) = if let Some(idx) = line.find('=') {
+                let (k, v) = line.split_at(idx);
+                (k.trim().to_string(), v[1..].trim().to_string())
+            } else {
+                continue;
+            };
+            cfg_map.insert(key, value);
+        }
+
+        Self::from_cfg_map(&cfg_map)
+    }
 }
+
+// fn load_config() -> Config {
+//     let data = fs::read_to_string("/home/szekang/Documents/RISCVuzz/config.json").expect("config.json not found");
+//     serde_json::from_str(&data).expect("Failed to parse config.json")
+// }
 
 // / Convert one RISC-V Vector Extension(RVV) instruction into code.
 // /
@@ -102,8 +157,8 @@ fn load_config() -> Config {
 // / assert_eq!(rvv_encode::encode("vle64.v v3, (a0), v0.t", false).unwrap(), Some(0b00000000000001010111000110000111));
 // / ```
 pub fn encode(inst: &str) -> Result<Option<u32>, Error> {
-    // get config variables from python config file
-    let config = load_config();
+    // get config variables from config file
+    let config = Config::from_cfg_file("/home/szekang/Documents/RISCVuzz/config.cfg");
 
     let pairs = if let Ok(result) = AsmParser::parse(Rule::inst, inst.trim()) {
         result

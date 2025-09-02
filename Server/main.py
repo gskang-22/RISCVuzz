@@ -2,7 +2,49 @@ import subprocess
 import json
 import random, time
 
+# Function to read your cfg file
+def read_cfg(filename):
+    cfg = {}
+    with open(filename) as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if not line or line.startswith("#"):
+                continue
 
+            if '=' in line:
+                key, value = line.split('=', 1)
+            else:
+                # Allow whitespace separator too
+                parts = line.split(None, 1)
+                if len(parts) != 2:
+                    continue
+                key, value = parts
+
+            key = key.strip()
+            value = value.strip()
+
+            # Convert lists (comma-separated)
+            if ',' in value:
+                value = [int(x) if x.strip().isdigit() or (x.strip()[0] == '-' and x.strip()[1:].isdigit()) else x.strip() for x in value.split(',')]
+            else:
+                # Convert numbers if possible
+                try:
+                    if '.' in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    # Convert booleans
+                    if value.lower() == 'true':
+                        value = True
+                    elif value.lower() == 'false':
+                        value = False
+
+            # Store in dictionary
+            cfg[key] = value
+
+    return cfg
 
 def call_instruction(input_str, node_proc):
     # Send instruction to Node.js
@@ -134,13 +176,40 @@ def main():
         text=True
     )
     # open config file
-    with open("/home/szekang/Documents/RISCVuzz/config.json") as f:
-        cfg = json.load(f)
+    # with open("/home/szekang/Documents/RISCVuzz/config.json") as f:
+    #     cfg = json.load(f)
+    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
 
     # generate fuzzing instructions for injection into sandbox
     output = []
     seed = int(time.time())
     random.seed(seed)
+    # # Combine VECTOR and BASE instructions
+    # all_instructions = VECTOR_INSTRUCTIONS + BASE_INSTRUCTIONS
+
+    # # Randomly select one instruction
+    # asm_input = random.choice(all_instructions)
+    # print("Selected Input:", asm_input)
+
+    # try:
+    #     # Determine which function to call
+    #     if asm_input in VECTOR_INSTRUCTIONS:
+    #         result = int(call_rust_asm(asm_input), 16)
+    #     else:
+    #         result = int((call_instruction(asm_input, node_proc))["hex"], 16)
+
+    #     formatted_result = "0x{:08x}".format(result & 0xffffffff)
+    #     output.append(formatted_result)
+    #     print("output:", formatted_result)
+
+    #     # Call check_flip N times
+    #     for _ in range(N):
+    #         check_flip(output, result, cfg)
+
+    # except RuntimeError as e:
+    #     print("Input:", asm_input, " -> Error:", e)
+
+    # print("-----------------------------------")
 
     for asm_input in VECTOR_INSTRUCTIONS:
         print("Input:" + asm_input)

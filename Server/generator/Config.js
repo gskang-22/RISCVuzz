@@ -54,9 +54,59 @@ export const configDefault = Object.freeze(
       ([k,v]) => [k, (v.default ?? v.opts[0])]
 )));
 
-import fs from 'fs';
-// Read JSON file once
-const cfg = JSON.parse(fs.readFileSync("/home/szekang/Documents/RISCVuzz/config.json", "utf8"));
-// Export cfg so other files can use it
-export default cfg;
+// import fs from 'fs';
+// // Read JSON file once
+// const cfg = JSON.parse(fs.readFileSync("/home/szekang/Documents/RISCVuzz/config.json", "utf8"));
+// // Export cfg so other files can use it
+// export default cfg;
 
+import fs from 'fs';
+import path from 'path';
+
+function readCfg(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const cfg = {};
+
+  content.split(/\r?\n/).forEach((line) => {
+    line = line.trim();
+    // Skip empty lines and comments
+    if (!line || line.startsWith('#')) return;
+
+    let key, value;
+    if (line.includes('=')) {
+      [key, value] = line.split('=', 2);
+    } else {
+      const parts = line.split(/\s+/, 2);
+      if (parts.length !== 2) return;
+      [key, value] = parts;
+    }
+
+    key = key.trim();
+    value = value.trim();
+
+    // Handle comma-separated lists
+    if (value.includes(',')) {
+      value = value.split(',').map(v => {
+        v = v.trim();
+        if (!isNaN(v)) return Number(v);
+        return v;
+      });
+    } else if (value.toLowerCase() === 'true') {
+      value = true;
+    } else if (value.toLowerCase() === 'false') {
+      value = false;
+    } else if (!isNaN(value)) {
+      value = Number(value);
+    }
+
+    cfg[key] = value;
+  });
+
+  return cfg;
+}
+
+// Read the CFG file
+const cfg = readCfg("/home/szekang/Documents/RISCVuzz/config.cfg");
+
+// Export for other modules
+export default cfg;
