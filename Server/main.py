@@ -62,7 +62,7 @@ def call_instruction(input_str, node_proc):
 
 def call_rust_asm(asm_line: str) -> str:
     # Replace with the path to your compiled Rust binary
-    rust_bin = "/home/szekang/Documents/RISCVuzz/Server/vector_generator/target/release/rvv-as"
+    rust_bin = "/home/szekang/Documents/RISCVuzz/Server/rvv-as"
     
     # Call the Rust program with the instruction as an argument
     result = subprocess.run(
