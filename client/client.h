@@ -1,23 +1,21 @@
 #include <stdint.h>
+#include <unistd.h>
+#include <setjmp.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <time.h>
+#include <stdbool.h>
 
-typedef struct {
-    void  *addr;
-    size_t len;
-} mapped_region_t;
-
-typedef struct {
-    void    *addr;    // absolute address
-    uint8_t  old_val; // expected value
-    uint8_t  new_val; // actual value
-} memdiff_t;
-
-void setup_signal_handlers();
-void initialise();
-uint8_t *allocate_executable_buffer();
-void free_executable_buffer(uint8_t *sandbox);
-void prepare_sandbox(uint8_t *sandbox_ptr);
-void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t num_instrs);
-void print_reg_changes();
-void unmap_vdso_vvar();
-void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32]);
+const char *reg_names[] = {
+    "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
+    "x5 (t0)", "x6 (t1)", "x7 (t2)", "x8 (s0/fp)", "x9 (s1)",
+    "x10 (a0)", "x11 (a1)", "x12 (a2)", "x13 (a3)", "x14 (a4)",
+    "x15 (a5)", "x16 (a6)", "x17 (a7)", "x18 (s2)", "x19 (s3)",
+    "x20 (s4)", "x21 (s5)", "x22 (s6)", "x23 (s7)", "x24 (s8)",
+    "x25 (s9)", "x26 (s10)", "x27 (s11)", "x28 (t3)", "x29 (t4)",
+    "x30 (t5)", "x31 (t6)"};
