@@ -10,3 +10,6 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <stdbool.h>
+
+void log_append(const char *fmt, ...);
+int send_log(int sock);

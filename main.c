@@ -5,12 +5,52 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <stdarg.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #include "main.h"
 #include "client.h"
 
 #define SERVER_IP "192.168.10.1" 
 #define SERVER_PORT 9000
+
+#define LOG_BUF_SIZE 4096
+
+char log_buffer[LOG_BUF_SIZE];
+size_t log_len = 0;  // current length of string in buffer
+
+void log_append(const char *fmt, ...) {
+    if (log_len >= LOG_BUF_SIZE - 1) return;  // buffer full
+
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(log_buffer + log_len, LOG_BUF_SIZE - log_len, fmt, args);
+    va_end(args);
+
+    if (n > 0) {
+        log_len += (size_t)n;
+        if (log_len >= LOG_BUF_SIZE) log_len = LOG_BUF_SIZE - 1;
+    }
+    // example usage
+//     log_append("Batch %d executed\n", batch_number);
+//     log_append("Register x1 = 0x%x\n", regs_after[1]);
+}
+
+int send_log(int sock) {
+    if (log_len == 0) return 0;
+
+    uint32_t len_net = htonl((uint32_t)log_len);
+    if (write(sock, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
+    if (write(sock, log_buffer, log_len) != (ssize_t)log_len) return -1;
+
+    log_len = 0;  // reset after sending
+    log_buffer[0] = '\0';
+    return 0;
+    // example usage
+    // send_log(sock);  // send accumulated logs to server
+}
+
 
 ssize_t read_n(int fd, void *buf, size_t n) {
     size_t total = 0;

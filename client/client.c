@@ -7,6 +7,7 @@ futher expansion.
 
 #include "client.h"
 #include "sandbox.h"
+#include "main.h"
 
 extern void run_sandbox();
 extern void test_start();
@@ -66,10 +67,10 @@ uint32_t instrs[] = {
 
 void print_registers(const char *label, uint64_t regs[32])
 {
-    printf("=== %s ===\n", label);
+    log_append("=== %s ===\n", label);
     for (int i = 0; i < 32; i++)
     {
-        printf("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
+        log_append("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
     }
 }
 
@@ -109,8 +110,9 @@ static void report_diffs(uint8_t expected)
 
     for (size_t k = 0; k < g_diffs_len; k++)
     {
-        fprintf(stdout, "CHG: addr=%p old=0x%02x new=0x%02x\n",
+        log_append("CHG: addr=%p old=0x%02x new=0x%02x\n",
                 g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
+
     }
 }
 
@@ -142,7 +144,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                        PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, // MAP_FIXED_NOREPLACE
                        -1, 0);
-        printf("mapping: %p\n", r);
+        log_append("mapping: %p\n", r);
         if (r == MAP_FAILED)
         {
             perror("mmap failed for lazy mapping");
@@ -150,7 +152,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         }
         else
         {
-            printf("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+            log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
                    (unsigned long)(uintptr_t)base,
                    (unsigned long)(uintptr_t)r);
 
@@ -181,7 +183,7 @@ static void unmap_all_regions(void)
 {
     for (size_t i = 0; i < g_regions_len; i++)
     {
-	printf("munmapping: %p\n", g_regions[i].addr);
+        log_append("munmapping: %p\n", g_regions[i].addr);
         if (munmap(g_regions[i].addr, g_regions[i].len) != 0)
         {
             perror("munmap failed");
@@ -196,7 +198,7 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
     while (1)
     {
         int jump_rc = sigsetjmp(jump_buffer, 1);
-        printf("jump_rc: %i\n", jump_rc);
+        log_append("jump_rc: %i\n", jump_rc);
 
         if (jump_rc == 0)
         {
@@ -208,39 +210,30 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
             // segv happened; map and retry
             void *base = page_align_down((void *)g_fault_addr);
             map_two_pages(base, fill_byte);
-            // run_sandbox(sandbox_ptr);
             continue;
         }
         else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4)
         {
-            printf("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
+            // log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
             break;
         }
     }
-    printf("run_until_quiet finished\n");
+    // log_append("run_until_quiet finished\n");
 }
 
 int run_client()
 {
-    //   srand((unsigned)time(NULL));  // Seed randomness
-    //   for (int i = 0; i < BUFFER_SIZE; i++) {
-    //       fuzz_buffer[i] = rand32();
-    //   }
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     setup_signal_handlers();
     unmap_vdso_vvar();
     sandbox_ptr = allocate_executable_buffer();
-    printf("sandbox ptr: %p\n", sandbox_ptr);
+    log_append("sandbox ptr: %p\n", sandbox_ptr);
 
-    // for (size_t i = 0; i < (size_t)BUFFER_SIZE; i++)
-    // for (size_t i = 0; i < fuzz_buffer_len; i++)
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
-        printf("\n");
-        printf("\n");
-        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
-        // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer2[i]);
-        // printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer3[i]);
+        // printf("\n");
+        log_append("\n");
+        log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
         // loops twice to check for differing results
         //        for (size_t x = 0; x < 2; x++)
@@ -257,7 +250,6 @@ int run_client()
         g_regions_len = 0;
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
-        fprintf(stdout, "jump_rc: %d\n", jump_rc);
         if (jump_rc == 0)
         {
             run_sandbox(sandbox_ptr);
@@ -265,31 +257,25 @@ int run_client()
         }
         else if (jump_rc == 1 || jump_rc == 4)
         {
-            fprintf(stderr, "Skipping invalid instruction at fuzz %zu\n", i);
-            fflush(stderr);
             // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
             continue;
         }
 
         // SIGSEGV if code reaches here
-        printf("Code raised sigsegv fault\n");
-
         run_until_quiet(1, 0x00);
         report_diffs(0x00);
 
-         printf("Mapped regions:\n");
-         for (size_t i = 0; i < g_regions_len; i++)
-         {
-             printf("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-         }
+        log_append("Mapped regions:\n");
+        for (size_t i = 0; i < g_regions_len; i++)
+        {
+            log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+        }
 
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-        //printf("g_faults_this_run = %d\n", g_faults_this_run);
-        //printf("g_fault_addr = 0x%llx\n", (unsigned long long)g_fault_addr);
-        
-	fill_all_pages(0xFF);
+
+        fill_all_pages(0xFF);
         run_until_quiet(1, 0xFF);
         report_diffs(0xFF);
     }
