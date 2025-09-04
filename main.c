@@ -6,6 +6,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include "main.h"
+#include "client.h"
+
 #define SERVER_IP "192.168.10.1" 
 #define SERVER_PORT 9000
 
@@ -87,6 +90,7 @@ int main() {
 
         // Todo: make this actually run the instructions.
         // For now, just echo them back as "results".
+        run_client();
         uint32_t result_count_net = htonl(batch_size);
         write_n(sock, &result_count_net, sizeof(result_count_net));
         for (uint32_t i = 0; i < batch_size; i++) {

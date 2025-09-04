@@ -10,3 +10,5 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <stdbool.h>
+
+int run_client();
