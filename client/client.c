@@ -6,7 +6,7 @@ futher expansion.
 */
 
 #include "client.h"
-#include "main.h"
+#include "sandbox.h"
 
 extern void run_sandbox();
 extern void test_start();
@@ -220,7 +220,7 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
     printf("run_until_quiet finished\n");
 }
 
-int main()
+int run_client()
 {
     //   srand((unsigned)time(NULL));  // Seed randomness
     //   for (int i = 0; i < BUFFER_SIZE; i++) {

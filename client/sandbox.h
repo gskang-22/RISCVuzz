@@ -12,6 +12,8 @@ typedef struct {
     uint8_t  new_val; // actual value
 } memdiff_t;
 
+extern const char *reg_names[32];
+
 void setup_signal_handlers();
 void initialise();
 uint8_t *allocate_executable_buffer();
