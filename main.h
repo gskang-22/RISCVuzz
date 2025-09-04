@@ -12,4 +12,4 @@
 #include <stdbool.h>
 
 void log_append(const char *fmt, ...);
-int send_log(int sock);
+int send_log();

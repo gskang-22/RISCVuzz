@@ -17,6 +17,7 @@
 
 #define LOG_BUF_SIZE 4096
 
+int sock;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0;  // current length of string in buffer
 
@@ -37,7 +38,7 @@ void log_append(const char *fmt, ...) {
 //     log_append("Register x1 = 0x%x\n", regs_after[1]);
 }
 
-int send_log(int sock) {
+int send_log() {
     if (log_len == 0) return 0;
 
     uint32_t len_net = htonl((uint32_t)log_len);
@@ -82,7 +83,7 @@ int send_string(int sock, const char *msg) {
 int main() {
     // creates a new socket (IPv4, TCP)
     // sock: file descriptor used to send/receive
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) { perror("socket"); exit(1); }
 
     struct sockaddr_in server_addr = {0};
