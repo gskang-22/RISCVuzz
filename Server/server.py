@@ -1,9 +1,6 @@
-# Aim: 
-#     1. Generate test cases for the client to run 
-#     2. Analyze the results sent back by client, and compare them (if there are multiple boards) 
-
-import asyncio
 import struct
+import serial
+import time
 
 BATCH_SIZE = 10
 INSTRUCTIONS = [
@@ -13,95 +10,81 @@ INSTRUCTIONS = [
     0x00308193,  # ADDI x3, x1, 3
 ] * 10  # fake fuzz batch
 
-clients = {}  # name -> writer
+# UART device on the PC side (USB-UART)
+UART_DEV = "/dev/ttyUSB0"
+BAUD = 115200
+
+clients = {}  # name -> serial.Serial object
 
 def handle_beagle_results(message):
-    # Read results
-
-    # print(f"[beagle] Got {len(results)} results")
-    # print(results[:10], "...")
-    return
+    # Do any analysis you want here
+    print(f"[beagle] {message[:200]}...")  # truncate long messages
 
 def handle_lichee_results(message):
-    return
+    print(f"[lichee] {message[:200]}...")  # truncate long messages
 
-# reads data from client and handles it 
-async def read_results(reader, name):
-    try:
-        # Step 1: read 4-byte length
-        length_data = await reader.readexactly(4)
-        (msg_len,) = struct.unpack("!I", length_data)
-        # Step 2: read message bytes
-        data = await reader.readexactly(msg_len)
-        # Step 3: decode and print
-        message = data.decode(errors="replace")  # safe decode
-        print(f"{message}")
+def read_results(ser, name):
+    """Reads a length-prefixed string from UART and handles it."""
+    # Step 1: read 4 bytes for message length
+    length_bytes = ser.read(4)
+    if len(length_bytes) != 4:
+        return False  # disconnected or timeout
 
-        # Handle results differently based on client name
-        if name == "beagle":
-            handle_beagle_results(message)
-        elif name == "lichee":
-            handle_lichee_results(message)
+    (msg_len,) = struct.unpack("!I", length_bytes)
+    # Step 2: read the actual message
+    data = ser.read(msg_len)
+    if len(data) != msg_len:
+        return False
 
-    except asyncio.IncompleteReadError:
-    # todo: raise error and terminate
-        return  # client disconnected
+    message = data.decode(errors="replace")
+    print(f"[{name}] {message}")
 
-async def handle_client(reader, writer):
-    # reader --> used to receive from client
-    # writer --> used to send to client
+    # dispatch by client
+    if name == "beagle":
+        handle_beagle_results(message)
+    elif name == "lichee":
+        handle_lichee_results(message)
+    return True
 
-    # Handshake: read client name
-    name_len_data = await reader.readexactly(4)
-    (name_len,) = struct.unpack("!I", name_len_data)
-    name = (await reader.readexactly(name_len)).decode()
+def send_batch(ser, batch):
+    """Sends a batch of instructions over UART (length-prefixed)."""
+    header = struct.pack("!I", len(batch))
+    payload = b"".join(struct.pack("!I", inst) for inst in batch)
+    ser.write(header + payload)
+    ser.flush()
 
-    clients[name] = writer  # store writer by name
+def handle_client(name, ser):
+    """Handles a single client (blocking)."""
+    clients[name] = ser
     print(f"Client connected: {name}")
 
-    # # sending a string 
-    # msg = "Hello, Beagle!"
-    # msg_bytes = msg.encode()              # convert to bytes
-    # header = struct.pack("!I", len(msg_bytes))  # 4-byte length
-    # writer.write(header + msg_bytes)
-    # await writer.drain()
-
-    # Each client independently runs the whole list
     instr_index = 0
-    try:
-        while instr_index < len(INSTRUCTIONS):
-            # Slice next N instructions
-            batch = INSTRUCTIONS[instr_index:instr_index + BATCH_SIZE]
-            instr_index += len(batch)
+    while instr_index < len(INSTRUCTIONS):
+        batch = INSTRUCTIONS[instr_index:instr_index + BATCH_SIZE]
+        instr_index += len(batch)
 
-            # Send batch
-            header = struct.pack("!I", len(batch))
-            payload = b"".join(struct.pack("!I", inst) for inst in batch)
-            writer.write(header + payload)
-            await writer.drain()
+        send_batch(ser, batch)
+        if not read_results(ser, name):
+            print(f"Client {name} disconnected")
+            break
 
-            # Wait for results before sending next batch
-            await read_results(reader, name)
-            
-        print(f"All instructions sent to {name}")
+    print(f"All instructions sent to {name}")
 
-    except asyncio.IncompleteReadError:
-        print(f"Client {name} disconnected unexpectedly")
+def main():
+    # Open UARTs for each board
+    beagle_ser = serial.Serial(UART_DEV, BAUD, timeout=1)
+    # If you have another board:
+    # lichee_ser = serial.Serial("/dev/ttyUSB1", BAUD, timeout=1)
 
-    writer.close()
-    await writer.wait_closed()
-    print(f"Client {name} disconnected")
+    # Assume first thing each client sends is its name
+    name_bytes = beagle_ser.read(4)
+    (name_len,) = struct.unpack("!I", name_bytes)
+    name = beagle_ser.read(name_len).decode()
+    handle_client(name, beagle_ser)
 
-async def main():
-    # creates a listening socket (TCP server)
-    # handle_client: callback function
-    server = await asyncio.start_server(handle_client, "0.0.0.0", 9000)
-    addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
-    print(f"Server listening on {addrs}")
+    # Close UARTs
+    beagle_ser.close()
+    # lichee_ser.close()
 
-    # runs server forever
-    async with server:
-        await server.serve_forever()
-
-# spawns handle_client() per connection
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
