@@ -53,7 +53,7 @@ int send_log() {
 
     log_len = 0;  // reset after sending
     log_buffer[0] = '\0';
-    printf("log sent; resetting log");
+    printf("log sent; resetting log\n");
     return 0;
     // example usage
     // send_log(sock);  // send accumulated logs to server

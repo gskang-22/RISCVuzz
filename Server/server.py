@@ -15,28 +15,33 @@ INSTRUCTIONS = [
 
 clients = {}  # name -> writer
 
-def handle_beagle_results(results):
+def handle_beagle_results(message):
     # Read results
 
-    print(f"[beagle] Got {len(results)} results")
-    print(results[:10], "...")
+    # print(f"[beagle] Got {len(results)} results")
+    # print(results[:10], "...")
+    return
 
-def handle_lichee_results(results):
+def handle_lichee_results(message):
     return
 
 # reads data from client and handles it 
 async def read_results(reader, name):
     try:
-        header = await reader.readexactly(4)
-        (result_count,) = struct.unpack("!I", header)
-        data = await reader.readexactly(result_count * 4)
-        results = [int.from_bytes(data[i*4:(i+1)*4], 'big') for i in range(result_count)]
+        # Step 1: read 4-byte length
+        length_data = await reader.readexactly(4)
+        (msg_len,) = struct.unpack("!I", length_data)
+        # Step 2: read message bytes
+        data = await reader.readexactly(msg_len)
+        # Step 3: decode and print
+        message = data.decode(errors="replace")  # safe decode
+        print(f"{message}")
 
         # Handle results differently based on client name
         if name == "beagle":
-            handle_beagle_results(results)
+            handle_beagle_results(message)
         elif name == "lichee":
-            handle_lichee_results(results)
+            handle_lichee_results(message)
 
     except asyncio.IncompleteReadError:
     # todo: raise error and terminate
