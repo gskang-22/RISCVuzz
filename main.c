@@ -88,8 +88,6 @@ int main() {
     sandbox_ptr = allocate_executable_buffer();
     log_append("sandbox ptr: %p\n", sandbox_ptr);
 
-    run_client();
-    return 0;
     // creates a new socket (IPv4, TCP)
     // sock: file descriptor used to send/receive
     sock = socket(AF_INET, SOCK_STREAM, 0);
