@@ -83,8 +83,6 @@ int send_string(int sock, const char *msg) {
 int main() {
 
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
-    setup_signal_handlers();
-    unmap_vdso_vvar();
     sandbox_ptr = allocate_executable_buffer();
     log_append("sandbox ptr: %p\n", sandbox_ptr);
 
@@ -135,7 +133,7 @@ int main() {
         read_n(sock, instructions, batch_size * sizeof(uint32_t));
         printf("Got %u instructions\n", batch_size);
 
-        run_client(); // runs sandbox 
+        run_client(instructions, batch_size); // runs sandbox 
 
         // Then send results back
         send_log();
@@ -150,6 +148,10 @@ int main() {
     }
 
     close(sock);
+
+    free_executable_buffer(sandbox_ptr); // unmap sandbox region
+    unmap_all_regions();                 // unmap g_regions
+
     printf("Done\n");
     return 0;
 }

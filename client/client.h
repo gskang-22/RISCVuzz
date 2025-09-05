@@ -12,4 +12,4 @@
 #include <stdbool.h>
 
 #define MAX_MAPPED_PAGES 4
-int run_client();
+int run_client(uint32_t *instructions, size_t n_instructions);

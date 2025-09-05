@@ -226,9 +226,13 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
     // log_append("run_until_quiet finished\n");
 }
 
-int run_client()
+int run_client(uint32_t *instructions, size_t n_instructions)
 {
-    for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
+    setup_signal_handlers();
+    unmap_vdso_vvar();
+
+    // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
+    for (size_t i = 0; i < n_instructions; i++)
     {
         log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
@@ -238,7 +242,8 @@ int run_client()
 
         // prepare sandbox
         prepare_sandbox(sandbox_ptr);
-        instrs[0] = fuzz_buffer[i];
+        // instrs[0] = fuzz_buffer[i];
+        instrs[0] = instructions[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
         // unmap using munmap
@@ -276,9 +281,6 @@ int run_client()
         run_until_quiet(1, 0xFF);
         report_diffs(0xFF);
     }
-
-    free_executable_buffer(sandbox_ptr); // unmap sandbox region
-    unmap_all_regions();                 // unmap g_regions
 
     return 0;
 }
