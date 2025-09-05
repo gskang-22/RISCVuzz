@@ -82,15 +82,14 @@ def handle_client(name, ser):
 def main():
     # Open UARTs for each board
     print("Opening UART and waiting for client...")
-    beagle_ser = serial.Serial(UART_DEV, BAUD, timeout=1)
+    # beagle_ser = serial.Serial(UART_DEV, BAUD, timeout=1)
+    beagle_ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1,
+                           parity=serial.PARITY_NONE,
+                           stopbits=serial.STOPBITS_ONE,
+                           bytesize=serial.EIGHTBITS,
+                           xonxoff=False, rtscts=False)
     # If you have another board:
     # lichee_ser = serial.Serial("/dev/ttyUSB1", BAUD, timeout=1)
-    while True:
-        data = beagle_ser.read(100)  # read up to 100 bytes
-        if data:
-            print(f"Received: {data}")
-            # Echo it back
-            beagle_ser.write(data)
 
     # Wait for handshake
     print("Waiting for client name...")
