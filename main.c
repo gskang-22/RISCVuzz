@@ -131,13 +131,20 @@ int main() {
 
         // Todo: make this actually run the instructions.
         // For now, just echo them back as "results".
-        run_client();
+
+        run_client(); // runs sandbox 
+        log_flush(sock); // Immediately send logs
+
+        // Then send results back
         uint32_t result_count_net = htonl(batch_size);
         write_n(sock, &result_count_net, sizeof(result_count_net));
-        for (uint32_t i = 0; i < batch_size; i++) {
-            uint32_t val = htonl(instructions[i]);
-            write_n(sock, &val, sizeof(uint32_t));
-        }    
+
+        // uint32_t result_count_net = htonl(batch_size);
+        // write_n(sock, &result_count_net, sizeof(result_count_net));
+        // for (uint32_t i = 0; i < batch_size; i++) {
+        //     uint32_t val = htonl(instructions[i]);
+        //     write_n(sock, &val, sizeof(uint32_t));
+        // }    
 
     free(instructions);
     }

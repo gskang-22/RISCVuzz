@@ -189,7 +189,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
 
         if (pc == (uintptr_t)fault_addr) {
             // PC has escaped from sandbox; abort
-            log_append(stderr, "[jump] PC escaped sandbox: 0x%lx\n", pc);
+            log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
             siglongjmp(jump_buffer, 4);
         } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
