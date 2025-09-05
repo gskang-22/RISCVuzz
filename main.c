@@ -27,11 +27,15 @@ void log_append(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     int n = vsnprintf(log_buffer + log_len, LOG_BUF_SIZE - log_len, fmt, args);
+
     va_end(args);
 
     if (n > 0) {
         log_len += (size_t)n;
-        if (log_len >= LOG_BUF_SIZE) log_len = LOG_BUF_SIZE - 1;
+        if (log_len >= LOG_BUF_SIZE) {
+            log_len = LOG_BUF_SIZE - 1;
+            log_buffer[log_len] = '\0';
+        }
     }
     // example usage
 //     log_append("Batch %d executed\n", batch_number);
@@ -41,17 +45,19 @@ void log_append(const char *fmt, ...) {
 int send_log() {
     if (log_len == 0) return 0;
 
+    // Send length prefix (network byte order)
     uint32_t len_net = htonl((uint32_t)log_len);
     if (write(sock, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
+    // Send the buffer itself
     if (write(sock, log_buffer, log_len) != (ssize_t)log_len) return -1;
 
     log_len = 0;  // reset after sending
     log_buffer[0] = '\0';
+    printf("log sent; resetting log");
     return 0;
     // example usage
     // send_log(sock);  // send accumulated logs to server
 }
-
 
 ssize_t read_n(int fd, void *buf, size_t n) {
     size_t total = 0;
@@ -126,19 +132,12 @@ int main() {
 
         uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
         read_n(sock, instructions, batch_size * sizeof(uint32_t));
-
         printf("Got %u instructions\n", batch_size);
 
-        // Todo: make this actually run the instructions.
-        // For now, just echo them back as "results".
-
         run_client(); // runs sandbox 
-        log_flush(sock); // Immediately send logs
 
         // Then send results back
-        uint32_t result_count_net = htonl(batch_size);
-        write_n(sock, &result_count_net, sizeof(result_count_net));
-
+        send_log();
         // uint32_t result_count_net = htonl(batch_size);
         // write_n(sock, &result_count_net, sizeof(result_count_net));
         // for (uint32_t i = 0; i < batch_size; i++) {

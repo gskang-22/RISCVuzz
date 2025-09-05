@@ -282,6 +282,5 @@ int run_client()
 
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
     unmap_all_regions();                 // unmap g_regions
-    send_log();
     return 0;
 }
