@@ -180,42 +180,42 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     switch (signo)
     {
     case SIGILL:
-        printf("Caught SIGILL (Illegal Instruction)\n");
-        printf("Faulting address: %p\n", fault_addr);
+        log_append("Caught SIGILL (Illegal Instruction)\n");
+        log_append("Faulting address: %p\n", fault_addr);
         break;
     case SIGBUS:
-        printf("Caught SIGBUS (Bus Error)\n");
+        log_append("Caught SIGBUS (Bus Error)\n");
         break;
     case SIGFPE:
-        printf("Caught SIGFPE (Floating Point Exception)\n");
+        log_append("Caught SIGFPE (Floating Point Exception)\n");
         break;
     case SIGTRAP:
-        printf("Caught SIGTRAP: EBREAK\n");
+        log_append("Caught SIGTRAP: EBREAK\n");
         break;
     case SIGSEGV:
-        printf("Caught SIGSEGV (Segmentation Fault)\n");
-        printf("Faulting address: %p\n", fault_addr);
+        log_append("Caught SIGSEGV (Segmentation Fault)\n");
+        log_append("Faulting address: %p\n", fault_addr);
 
         if (pc == (uintptr_t)fault_addr) {
             // PC has escaped from sandbox; abort
-            printf("[jump] PC escaped sandbox: 0x%lx\n", pc);
+            log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
             siglongjmp(jump_buffer, 4);
         } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
             // SIGSEGV occured in sandbox page or kernel. Abort
-            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
+            log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
             siglongjmp(jump_buffer, 4);
         } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
         {
-            printf("threshold exceeded; proceeding anyway.\n");
+            log_append("threshold exceeded; proceeding anyway.\n");
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
         g_fault_addr = (uintptr_t)fault_addr;
         g_faults_this_run++;
-        printf("g_faults_this_run: %d\n", g_faults_this_run);
+        log_append("g_faults_this_run: %d\n", g_faults_this_run);
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
     default:
-        printf("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
+        log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
     }
     siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
 }
@@ -278,7 +278,7 @@ void print_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
     {
         if (regs_before[i] != regs_after[i])
         {
-            printf("%-4s changed: 0x%016lx -> 0x%016lx\n",
+            log_append("%-4s changed: 0x%016lx -> 0x%016lx\n",
                    reg_names[i], regs_before[i], regs_after[i]);
         }
     }
@@ -290,7 +290,7 @@ void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
     {
         if (regs_before[i] != regs_after[i])
         {
-            printf("WARNING: Register x%d differs: 0x%016lx -> 0x%016lx\n",
+            log_append("WARNING: Register x%d differs: 0x%016lx -> 0x%016lx\n",
                    i, regs_before[i], regs_after[i]);
         }
     }

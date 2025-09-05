@@ -66,10 +66,10 @@ uint32_t instrs[] = {
 
 void print_registers(const char *label, uint64_t regs[32])
 {
-    printf("=== %s ===\n", label);
+    log_append("=== %s ===\n", label);
     for (int i = 0; i < 32; i++)
     {
-        printf("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
+        log_append("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
     }
 }
 
@@ -109,7 +109,7 @@ static void report_diffs(uint8_t expected)
 
     for (size_t k = 0; k < g_diffs_len; k++)
     {
-        printf("CHG: addr=%p old=0x%02x new=0x%02x\n",
+        log_append("CHG: addr=%p old=0x%02x new=0x%02x\n",
                 g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
 
     }
@@ -143,7 +143,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                        PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, // MAP_FIXED_NOREPLACE
                        -1, 0);
-        printf("mapping: %p\n", r);
+        log_append("mapping: %p\n", r);
         if (r == MAP_FAILED)
         {
             perror("mmap failed for lazy mapping");
@@ -151,7 +151,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         }
         else
         {
-            printf("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+            log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
                    (unsigned long)(uintptr_t)base,
                    (unsigned long)(uintptr_t)r);
 
@@ -182,7 +182,7 @@ static void unmap_all_regions(void)
 {
     for (size_t i = 0; i < g_regions_len; i++)
     {
-        printf("munmapping: %p\n", g_regions[i].addr);
+        log_append("munmapping: %p\n", g_regions[i].addr);
         if ((uintptr_t)g_regions[i].addr % page_size != 0) {
             fprintf(stderr, "munmap addr not page-aligned: %p\n", g_regions[i].addr);
         }
@@ -230,7 +230,7 @@ int run_client()
 {
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
-        printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+        log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
         // loops twice to check for differing results
         //        for (size_t x = 0; x < 2; x++)
@@ -262,10 +262,10 @@ int run_client()
         run_until_quiet(1, 0x00);
         report_diffs(0x00);
 
-        printf("Mapped regions:\n");
+        log_append("Mapped regions:\n");
         for (size_t i = 0; i < g_regions_len; i++)
         {
-            printf("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+            log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
         }
 
         prepare_sandbox(sandbox_ptr);

@@ -86,7 +86,7 @@ int main() {
     setup_signal_handlers();
     unmap_vdso_vvar();
     sandbox_ptr = allocate_executable_buffer();
-    printf("sandbox ptr: %p\n", sandbox_ptr);
+    log_append("sandbox ptr: %p\n", sandbox_ptr);
 
     run_client();
     return 0;
