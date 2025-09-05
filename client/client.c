@@ -184,6 +184,13 @@ static void unmap_all_regions(void)
     for (size_t i = 0; i < g_regions_len; i++)
     {
         log_append("munmapping: %p\n", g_regions[i].addr);
+        if ((uintptr_t)g_regions[i].addr % page_size != 0) {
+            fprintf(stderr, "munmap addr not page-aligned: %p\n", g_regions[i].addr);
+        }
+        if (g_regions[i].len % page_size != 0) {
+            fprintf(stderr, "munmap len not page-size aligned: %zu\n", g_regions[i].len);
+        }
+        
         if (munmap(g_regions[i].addr, g_regions[i].len) != 0)
         {
             perror("munmap failed");
@@ -198,7 +205,6 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
     while (1)
     {
         int jump_rc = sigsetjmp(jump_buffer, 1);
-        log_append("jump_rc: %i\n", jump_rc);
 
         if (jump_rc == 0)
         {
@@ -231,8 +237,6 @@ int run_client()
 
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
-        // printf("\n");
-        log_append("\n");
         log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
 
         // loops twice to check for differing results

@@ -87,6 +87,13 @@ void free_executable_buffer(uint8_t *sandbox) {
     // compute back the original base (buf)
     void *buf = sandbox - guard_pages * page_size;
 
+    if ((uintptr_t)buf % page_size != 0) {
+    fprintf(stderr, "munmap addr not page-aligned: %p\n", buf);
+    }
+    if (total_size % page_size != 0) {
+        fprintf(stderr, "munmap len not page-size aligned: %zu\n", total_size);
+    }
+
     if (munmap(buf, total_size) != 0) {
         perror("munmap failed");
     }
