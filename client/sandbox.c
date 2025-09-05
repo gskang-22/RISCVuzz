@@ -10,6 +10,8 @@
 #include "client.h"
 #include "../main.h"
 
+
+
 const char *reg_names[] = {
     "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
     "x5 (t0)", "x6 (t1)", "x7 (t2)", "x8 (s0/fp)", "x9 (s1)",

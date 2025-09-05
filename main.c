@@ -23,9 +23,6 @@ int sock;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0;  // current length of string in buffer
 
-extern uint8_t *sandbox_ptr;
-extern mapped_region_t *g_regions;
-
 void log_append(const char *fmt, ...) {
     if (log_len >= LOG_BUF_SIZE - 1) return;  // buffer full
 
