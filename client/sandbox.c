@@ -178,42 +178,42 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     switch (signo)
     {
     case SIGILL:
-        log_append("Caught SIGILL (Illegal Instruction)\n");
-        log_append("Faulting address: %p\n", fault_addr);
+        printf("Caught SIGILL (Illegal Instruction)\n");
+        printf("Faulting address: %p\n", fault_addr);
         break;
     case SIGBUS:
-        log_append("Caught SIGBUS (Bus Error)\n");
+        printf("Caught SIGBUS (Bus Error)\n");
         break;
     case SIGFPE:
-        log_append("Caught SIGFPE (Floating Point Exception)\n");
+        printf("Caught SIGFPE (Floating Point Exception)\n");
         break;
     case SIGTRAP:
-        log_append("Caught SIGTRAP: EBREAK\n");
+        printf("Caught SIGTRAP: EBREAK\n");
         break;
     case SIGSEGV:
-        log_append("Caught SIGSEGV (Segmentation Fault)\n");
-        log_append("Faulting address: %p\n", fault_addr);
+        printf("Caught SIGSEGV (Segmentation Fault)\n");
+        printf("Faulting address: %p\n", fault_addr);
 
         if (pc == (uintptr_t)fault_addr) {
             // PC has escaped from sandbox; abort
-            log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
+            printf("[jump] PC escaped sandbox: 0x%lx\n", pc);
             siglongjmp(jump_buffer, 4);
         } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
             // SIGSEGV occured in sandbox page or kernel. Abort
-            log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
+            printf("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
             siglongjmp(jump_buffer, 4);
         } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
         {
-            log_append("threshold exceeded; proceeding anyway.\n");
+            printf("threshold exceeded; proceeding anyway.\n");
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
         g_fault_addr = (uintptr_t)fault_addr;
         g_faults_this_run++;
-        log_append("g_faults_this_run: %d\n", g_faults_this_run);
+        printf("g_faults_this_run: %d\n", g_faults_this_run);
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
     default:
-        log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
+        printf("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
     }
     siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
 }

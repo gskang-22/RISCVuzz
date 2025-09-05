@@ -88,6 +88,8 @@ int send_string(int sock, const char *msg) {
 }
 
 int main() {
+    run_client();
+    return 0;
     // creates a new socket (IPv4, TCP)
     // sock: file descriptor used to send/receive
     sock = socket(AF_INET, SOCK_STREAM, 0);
