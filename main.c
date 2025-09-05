@@ -1,3 +1,7 @@
+#include "main.h"
+#include "client.h"
+#include "sandbox.h"
+
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -8,7 +12,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-#define UART_DEV "/dev/ttyS4"   // adjust for your board
+#define UART_DEV "/dev/ttyS1"   // adjust for your board
 #define UART_BAUD B115200
 
 #define LOG_BUF_SIZE 4096
@@ -17,20 +21,126 @@ int uart_fd;  // file descriptor for UART
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0;
 
+extern uint8_t *sandbox_ptr;
+extern mapped_region_t *g_regions;
 
+// ---------------- Logging ----------------
+void log_append(const char *fmt, ...) {
+    if (log_len >= LOG_BUF_SIZE - 1) return;
+
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(log_buffer + log_len, LOG_BUF_SIZE - log_len, fmt, args);
+    va_end(args);
+
+    if (n > 0) {
+        log_len += (size_t)n;
+        if (log_len >= LOG_BUF_SIZE) {
+            log_len = LOG_BUF_SIZE - 1;
+            log_buffer[log_len] = '\0';
+        }
+    }
+}
+
+int send_log() {
+    if (log_len == 0) return 0;
+
+    uint32_t len_net = htonl((uint32_t)log_len);
+    if (write(uart_fd, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
+    if (write(uart_fd, log_buffer, log_len) != (ssize_t)log_len) return -1;
+
+    log_len = 0;
+    log_buffer[0] = '\0';
+    printf("log sent; resetting log\n");
+    fflush(stdout);
+    return 0;
+}
+
+// ---------------- UART Helpers ----------------
+ssize_t read_n(int fd, void *buf, size_t n) {
+    size_t total = 0;
+    while (total < n) {
+        ssize_t ret = read(fd, (char*)buf + total, n - total);
+        if (ret <= 0) return ret;
+        total += ret;
+    }
+    return total;
+}
+
+ssize_t write_n(int fd, const void *buf, size_t n) {
+    size_t total = 0;
+    while (total < n) {
+        ssize_t ret = write(fd, (char*)buf + total, n - total);
+        if (ret <= 0) return ret;
+        total += ret;
+    }
+    return total;
+}
+
+// ---------------- Main ----------------
 int main() {
-    int fd = open(UART_DEV, O_RDWR);
-    if(fd < 0) { perror("open"); return 1; }
+    g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
+    setup_signal_handlers();
+    unmap_vdso_vvar();
+    sandbox_ptr = allocate_executable_buffer();
+    log_append("sandbox ptr: %p\n", sandbox_ptr);
 
-    char *msg = "Hello from board!\n";
-    write(fd, msg, 18);
+    // --- Open UART ---
+    uart_fd = open(UART_DEV, O_RDWR | O_NOCTTY);
+    if (uart_fd < 0) { perror("open UART"); return 1; }
 
-    char buf[100];
-    int n = read(fd, buf, sizeof(buf));
-    if(n > 0) {
-        write(1, buf, n); // print to console
+    struct termios tty;
+    tcgetattr(uart_fd, &tty);
+    cfsetospeed(&tty, UART_BAUD);
+    cfsetispeed(&tty, UART_BAUD);
+
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+    tty.c_cflag &= ~PARENB;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+    tcsetattr(uart_fd, TCSANOW, &tty);
+
+    printf("Connected via UART\n");
+
+    // --- Send client name ---
+    const char *name = "beagle";
+    uint32_t len = htonl(strlen(name));
+    write(uart_fd, &len, sizeof(len));
+    write(uart_fd, name, strlen(name));
+
+    // --- Main loop: receive instructions, run sandbox, send log ---
+    while (1) {
+        uint32_t batch_size_net;
+        if (read_n(uart_fd, &batch_size_net, sizeof(batch_size_net)) != sizeof(batch_size_net)) {
+            printf("Server closed connection\n");
+            break;
+        }
+
+        uint32_t batch_size = ntohl(batch_size_net);
+        if (batch_size == 0) {
+            printf("No more instructions\n");
+            break;
+        }
+
+        uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
+        for (uint32_t i = 0; i < batch_size; i++) {
+            uint32_t tmp;
+            read_n(uart_fd, &tmp, sizeof(tmp));
+            instructions[i] = ntohl(tmp);
+        }
+
+        printf("Got %u instructions\n", batch_size);
+
+        run_client();  // run sandbox
+
+        send_log();  // send accumulated logs back over UART
+
+        free(instructions);
     }
 
-    close(fd);
+    close(uart_fd);
+    printf("Done\n");
     return 0;
 }

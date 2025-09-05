@@ -1,6 +1,5 @@
 import struct
 import serial
-import time
 
 BATCH_SIZE = 10
 INSTRUCTIONS = [
@@ -23,16 +22,26 @@ def handle_beagle_results(message):
 def handle_lichee_results(message):
     print(f"[lichee] {message[:200]}...")  # truncate long messages
 
+def read_n(ser, n):
+    """Read exactly n bytes from serial port."""
+    data = b''
+    while len(data) < n:
+        chunk = ser.read(n - len(data))
+        if not chunk:
+            raise IOError("UART disconnected or timeout")
+        data += chunk
+    return data
+
 def read_results(ser, name):
     """Reads a length-prefixed string from UART and handles it."""
     # Step 1: read 4 bytes for message length
-    length_bytes = ser.read(4)
+    length_bytes = read_n(ser, 4)
     if len(length_bytes) != 4:
         return False  # disconnected or timeout
 
     (msg_len,) = struct.unpack("!I", length_bytes)
     # Step 2: read the actual message
-    data = ser.read(msg_len)
+    data = read_n(ser, msg_len)
     if len(data) != msg_len:
         return False
 
@@ -72,15 +81,30 @@ def handle_client(name, ser):
 
 def main():
     # Open UARTs for each board
+    print("Opening UART and waiting for client...")
     beagle_ser = serial.Serial(UART_DEV, BAUD, timeout=1)
     # If you have another board:
     # lichee_ser = serial.Serial("/dev/ttyUSB1", BAUD, timeout=1)
+    while True:
+        data = beagle_ser.read(100)  # read up to 100 bytes
+        if data:
+            print(f"Received: {data}")
+            # Echo it back
+            beagle_ser.write(data)
 
-    # Assume first thing each client sends is its name
-    name_bytes = beagle_ser.read(4)
-    (name_len,) = struct.unpack("!I", name_bytes)
-    name = beagle_ser.read(name_len).decode()
-    handle_client(name, beagle_ser)
+    # Wait for handshake
+    print("Waiting for client name...")
+    name_len_bytes = read_n(beagle_ser, 4)
+    (name_len,) = struct.unpack("!I", name_len_bytes)
+    name = read_n(beagle_ser, name_len).decode()
+    print(f"Client connected: {name}")
+
+    # Now you can send instructions or receive logs
+    # Example: just read one log string
+    log_len_bytes = read_n(beagle_ser, 4)
+    (log_len,) = struct.unpack("!I", log_len_bytes)
+    log = read_n(beagle_ser, log_len).decode()
+    print(f"Received log: {log}")
 
     # Close UARTs
     beagle_ser.close()
