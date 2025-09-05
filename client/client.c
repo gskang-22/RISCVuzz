@@ -7,7 +7,7 @@ futher expansion.
 
 #include "client.h"
 #include "sandbox.h"
-#include "main.h"
+#include "../main.h"
 
 extern void run_sandbox();
 extern void test_start();

@@ -1,5 +1,3 @@
-#include "client.h"
-
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
@@ -8,6 +6,9 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <ucontext.h>
+
+#include "client.h"
+#include "../main.h"
 
 const char *reg_names[] = {
     "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
