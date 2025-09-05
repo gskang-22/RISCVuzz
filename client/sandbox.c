@@ -21,9 +21,9 @@ const char *reg_names[] = {
     "x25 (s9)", "x26 (s10)", "x27 (s11)", "x28 (t3)", "x29 (t4)",
     "x30 (t5)", "x31 (t6)"
 };
-
-extern uint64_t temp_storage[];
+extern uint64_t xreg_init_data[];
 extern uint64_t xreg_output_data[];
+extern uint64_t freg_init_data[];
 extern uint64_t freg_output_data[];
 extern void signal_trampoline(); // from assembly
 extern uint8_t *sandbox_ptr;
@@ -198,7 +198,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
 
         if (pc == (uintptr_t)fault_addr) {
             // PC has escaped from sandbox; abort
-            log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
+            // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
             siglongjmp(jump_buffer, 4);
         } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
@@ -212,7 +212,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         }
         g_fault_addr = (uintptr_t)fault_addr;
         g_faults_this_run++;
-        log_append("g_faults_this_run: %d\n", g_faults_this_run);
+        // log_append("g_faults_this_run: %d\n", g_faults_this_run);
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
     default:
         log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
@@ -271,27 +271,50 @@ void unmap_vdso_vvar()
     fclose(maps);
 }
 
-void print_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
+void print_xreg_changes(void)
 {
-
     for (int i = 0; i < 32; i++)
     {
-        if (regs_before[i] != regs_after[i])
+        if (xreg_init_data[i] != xreg_output_data[i])
         {
             log_append("%-4s changed: 0x%016lx -> 0x%016lx\n",
-                   reg_names[i], regs_before[i], regs_after[i]);
+                       reg_names[i], xreg_init_data[i], xreg_output_data[i]);
         }
     }
 }
 
-void compare_reg_changes(uint64_t regs_before[32], uint64_t regs_after[32])
+void compare_xreg_changes(void)
 {
     for (int i = 0; i < 32; i++)
     {
-        if (regs_before[i] != regs_after[i])
+        if (xreg_init_data[i] != xreg_output_data[i])
         {
-            log_append("WARNING: Register x%d differs: 0x%016lx -> 0x%016lx\n",
-                   i, regs_before[i], regs_after[i]);
+            log_append("WARNING: x%d differs: 0x%016lx -> 0x%016lx\n",
+                       i, xreg_init_data[i], xreg_output_data[i]);
+        }
+    }
+}
+
+void print_freg_changes(void)
+{
+    for (int i = 0; i < 32; i++)
+    {
+        if (freg_init_data[i] != freg_output_data[i])
+        {
+            log_append("f%-3d changed: 0x%016lx -> 0x%016lx\n",
+                       i, freg_init_data[i], freg_output_data[i]);
+        }
+    }
+}
+
+void compare_freg_changes(void)
+{
+    for (int i = 0; i < 32; i++)
+    {
+        if (freg_init_data[i] != freg_output_data[i])
+        {
+            log_append("WARNING: f%d differs: 0x%016lx -> 0x%016lx\n",
+                       i, freg_init_data[i], freg_output_data[i]);
         }
     }
 }

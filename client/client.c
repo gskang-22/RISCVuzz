@@ -66,7 +66,7 @@ uint32_t instrs[] = {
 
 void print_registers(const char *label, uint64_t regs[32])
 {
-    log_append("=== %s ===\n", label);
+    // log_append("=== %s ===\n", label);
     for (int i = 0; i < 32; i++)
     {
         log_append("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
@@ -143,7 +143,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                        PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, // MAP_FIXED_NOREPLACE
                        -1, 0);
-        log_append("mapping: %p\n", r);
+        // log_append("mapping: %p\n", r);
         if (r == MAP_FAILED)
         {
             perror("mmap failed for lazy mapping");
@@ -151,9 +151,9 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         }
         else
         {
-            log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
-                   (unsigned long)(uintptr_t)base,
-                   (unsigned long)(uintptr_t)r);
+            // log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+            //        (unsigned long)(uintptr_t)base,
+            //        (unsigned long)(uintptr_t)r);
 
             // add region to g_regions array
             if (g_regions_len < MAX_MAPPED_PAGES)
@@ -178,11 +178,11 @@ static void fill_all_pages(uint8_t fill_byte)
 }
 
 // Unmap all mapped regions and reset g_regions_len
-static void unmap_all_regions(void)
+void unmap_all_regions(void)
 {
     for (size_t i = 0; i < g_regions_len; i++)
     {
-        log_append("munmapping: %p\n", g_regions[i].addr);
+        // log_append("munmapping: %p\n", g_regions[i].addr);
         if ((uintptr_t)g_regions[i].addr % page_size != 0) {
             fprintf(stderr, "munmap addr not page-aligned: %p\n", g_regions[i].addr);
         }
@@ -267,11 +267,11 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         run_until_quiet(1, 0x00);
         report_diffs(0x00);
 
-        log_append("Mapped regions:\n");
-        for (size_t i = 0; i < g_regions_len; i++)
-        {
-            log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-        }
+        // log_append("Mapped regions:\n");
+        // for (size_t i = 0; i < g_regions_len; i++)
+        // {
+        //     log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+        // }
 
         prepare_sandbox(sandbox_ptr);
         instrs[0] = fuzz_buffer[i];
