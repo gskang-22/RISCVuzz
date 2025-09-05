@@ -11,4 +11,5 @@
 #include <time.h>
 #include <stdbool.h>
 
+#define MAX_MAPPED_PAGES 4
 int run_client();

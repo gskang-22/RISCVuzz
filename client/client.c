@@ -25,10 +25,9 @@ uint8_t *sandbox_ptr;
 extern size_t sandbox_pages;
 extern size_t page_size;
 
-#define MAX_MAPPED_PAGES 4
 volatile sig_atomic_t g_faults_this_run = 0;
 volatile uintptr_t g_fault_addr = 0;
-static mapped_region_t *g_regions = NULL;
+mapped_region_t *g_regions = NULL;
 static size_t g_regions_len = 0;
 
 static memdiff_t *g_diffs = NULL;
@@ -229,12 +228,6 @@ static void run_until_quiet(int fill_mode, uint8_t fill_byte)
 
 int run_client()
 {
-    g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
-    setup_signal_handlers();
-    unmap_vdso_vvar();
-    sandbox_ptr = allocate_executable_buffer();
-    printf("sandbox ptr: %p\n", sandbox_ptr);
-
     for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     {
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);

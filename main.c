@@ -21,6 +21,9 @@ int sock;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0;  // current length of string in buffer
 
+extern uint8_t *sandbox_ptr;
+extern mapped_region_t *g_regions;
+
 void log_append(const char *fmt, ...) {
     if (log_len >= LOG_BUF_SIZE - 1) return;  // buffer full
 
@@ -88,6 +91,13 @@ int send_string(int sock, const char *msg) {
 }
 
 int main() {
+
+    g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
+    setup_signal_handlers();
+    unmap_vdso_vvar();
+    sandbox_ptr = allocate_executable_buffer();
+    printf("sandbox ptr: %p\n", sandbox_ptr);
+
     run_client();
     return 0;
     // creates a new socket (IPv4, TCP)
