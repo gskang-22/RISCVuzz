@@ -16,6 +16,26 @@ int sock;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0;  // current length of string in buffer
 
+ssize_t read_n(int fd, void *buf, size_t n) {
+    size_t total = 0;
+    while (total < n) {
+        ssize_t ret = read(fd, (char*)buf + total, n - total);
+        if (ret <= 0) return ret;  // error or disconnect
+        total += ret;
+    }
+    return total;
+}
+
+ssize_t write_n(int fd, const void *buf, size_t n) {
+    size_t total = 0;
+    while (total < n) {
+        ssize_t ret = write(fd, (char*)buf + total, n - total);
+        if (ret <= 0) return ret;
+        total += ret;
+    }
+    return total;
+}
+
 void log_append(const char *fmt, ...) {
     if (log_len >= LOG_BUF_SIZE - 1) return;  // buffer full
 
@@ -55,26 +75,6 @@ int send_log() {
     // send_log(sock);  // send accumulated logs to server
 }
 
-ssize_t read_n(int fd, void *buf, size_t n) {
-    size_t total = 0;
-    while (total < n) {
-        ssize_t ret = read(fd, (char*)buf + total, n - total);
-        if (ret <= 0) return ret;  // error or disconnect
-        total += ret;
-    }
-    return total;
-}
-
-ssize_t write_n(int fd, const void *buf, size_t n) {
-    size_t total = 0;
-    while (total < n) {
-        ssize_t ret = write(fd, (char*)buf + total, n - total);
-        if (ret <= 0) return ret;
-        total += ret;
-    }
-    return total;
-}
-
 int send_string(int sock, const char *msg) {
     uint32_t len = htonl(strlen(msg));   // 4-byte length prefix
     if (write(sock, &len, sizeof(len)) != sizeof(len)) return -1;  // send length
@@ -112,8 +112,8 @@ int main() {
     // send client name for identification
     const char *name = "beagle";
     uint32_t len = htonl(strlen(name));
-    write(sock, &len, sizeof(len));   // send length
-    write(sock, name, strlen(name));  // send name
+    write_n(sock, &len, sizeof(len));   // send length
+    write_n(sock, name, strlen(name));  // send name
 
     // loop: receive instructions, send back results 
     while (1) {
@@ -168,7 +168,7 @@ int main() {
 
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
     unmap_all_regions();                 // unmap g_regions
-    
+
     free(g_regions);
     g_regions = NULL;
     free(g_diffs);
