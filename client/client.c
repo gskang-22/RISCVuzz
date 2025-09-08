@@ -237,11 +237,8 @@ int run_client(uint32_t *instructions, size_t n_instructions)
     // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     for (size_t i = 0; i < n_instructions; i++)
     {
-        log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
-
-        // loops twice to check for differing results
-        //        for (size_t x = 0; x < 2; x++)
-        //        {
+        // log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+        log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
 
         // prepare sandbox
         prepare_sandbox(sandbox_ptr);
@@ -283,6 +280,9 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         fill_all_pages(0xFF);
         run_until_quiet(0xFF);
         report_diffs(0xFF);
+
+        print_xreg_changes();
+        print_freg_changes();
     }
 
     return 0;

@@ -7,11 +7,18 @@ import struct
 
 BATCH_SIZE = 10
 INSTRUCTIONS = [
-    0x00000013,  # NOP
-    0x00100093,  # ADDI x1, x0, 1
-    0x00200113,  # ADDI x2, x0, 2
-    0x00308193,  # ADDI x3, x1, 3
-] * 10  # fake fuzz batch
+    # instructions to be injected
+    0x00000013, # nop
+    0x10028027, # ghostwrite
+    0xFFFFFFFF, # illegal instruction
+    0x00008067, # ret
+    0x00050067, # jump to x10
+    0x00048067, # jump to x9
+    0x00058067, # jump to x11
+    0x0000a103, # lw x2, 0(x1)
+    0x0142b183, # ld x3, 20(x5)
+    0x01423183, # ld x3, 20(x4)
+] * 2
 
 clients = {}  # name -> writer
 

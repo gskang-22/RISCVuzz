@@ -153,6 +153,7 @@ int main() {
         // convert each network-order word instruction with ntohl
         for (uint32_t i = 0; i < batch_size; i++) {
             instructions[i] = ntohl(instructions[i]);
+            // printf("Instruction[%u] = 0x%08x\n", i, instructions[i]); // prints instructions received
         }
 
         // run sandbox 

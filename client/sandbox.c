@@ -33,7 +33,7 @@ ucontext_t saved_context;
 uint64_t regs_before[32];
 uint64_t regs_after[32];
 
-uint64_t fcsr_output_data;
+uint64_t fcsr_output_data; // todo: consdier sending this to server for comparison too
 char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
 extern volatile uintptr_t g_fault_addr;
@@ -283,18 +283,6 @@ void print_xreg_changes(void)
     }
 }
 
-void compare_xreg_changes(void)
-{
-    for (int i = 0; i < 32; i++)
-    {
-        if (xreg_init_data[i] != xreg_output_data[i])
-        {
-            log_append("WARNING: x%d differs: 0x%016lx -> 0x%016lx\n",
-                       i, xreg_init_data[i], xreg_output_data[i]);
-        }
-    }
-}
-
 void print_freg_changes(void)
 {
     for (int i = 0; i < 32; i++)
@@ -302,18 +290,6 @@ void print_freg_changes(void)
         if (freg_init_data[i] != freg_output_data[i])
         {
             log_append("f%-3d changed: 0x%016lx -> 0x%016lx\n",
-                       i, freg_init_data[i], freg_output_data[i]);
-        }
-    }
-}
-
-void compare_freg_changes(void)
-{
-    for (int i = 0; i < 32; i++)
-    {
-        if (freg_init_data[i] != freg_output_data[i])
-        {
-            log_append("WARNING: f%d differs: 0x%016lx -> 0x%016lx\n",
                        i, freg_init_data[i], freg_output_data[i]);
         }
     }
