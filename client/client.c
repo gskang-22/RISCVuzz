@@ -28,9 +28,9 @@ extern size_t page_size;
 volatile sig_atomic_t g_faults_this_run = 0;
 volatile uintptr_t g_fault_addr = 0;
 mapped_region_t *g_regions = NULL;
-static size_t g_regions_len = 0;
+static size_t g_regions_len = 0; // global counter variable (number of valid entries currently stored in the g_regions array)
 
-static memdiff_t *g_diffs = NULL;
+memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0;
 static size_t g_diffs_cap = 0;
 
@@ -195,9 +195,12 @@ void unmap_all_regions(void)
             perror("munmap failed");
         }
     }
+
+    g_faults_this_run = 0;
+    g_regions_len = 0;
 }
 
-static void run_until_quiet(int fill_mode, uint8_t fill_byte)
+static void run_until_quiet(int8_t fill_byte)
 {
     g_fault_addr = 0;
 
@@ -248,8 +251,6 @@ int run_client(uint32_t *instructions, size_t n_instructions)
 
         // unmap using munmap
         unmap_all_regions(); // unmap g_regions
-        g_faults_this_run = 0;
-        g_regions_len = 0;
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
         if (jump_rc == 0)
@@ -264,7 +265,7 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         }
 
         // SIGSEGV if code reaches here
-        run_until_quiet(1, 0x00);
+        run_until_quiet(0x00);
         report_diffs(0x00);
 
         // log_append("Mapped regions:\n");
@@ -274,11 +275,13 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         // }
 
         prepare_sandbox(sandbox_ptr);
-        instrs[0] = fuzz_buffer[i];
+        // instrs[0] = fuzz_buffer[i];
+        instrs[0] = instructions[i];
+
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
         fill_all_pages(0xFF);
-        run_until_quiet(1, 0xFF);
+        run_until_quiet(0xFF);
         report_diffs(0xFF);
     }
 

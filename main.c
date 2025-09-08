@@ -4,6 +4,7 @@
 
 extern uint8_t *sandbox_ptr;
 extern mapped_region_t *g_regions;
+extern memdiff_t *g_diffs;
 extern void unmap_all_regions();
 
 #define SERVER_IP "192.168.10.1" 
@@ -41,9 +42,9 @@ int send_log() {
 
     // Send length prefix (network byte order)
     uint32_t len_net = htonl((uint32_t)log_len);
-    if (write(sock, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
+    if (write_n(sock, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
     // Send the buffer itself
-    if (write(sock, log_buffer, log_len) != (ssize_t)log_len) return -1;
+    if (write_n(sock, log_buffer, log_len) != (ssize_t)log_len) return -1;
 
     log_len = 0;  // reset after sending
     log_buffer[0] = '\0';
@@ -130,28 +131,48 @@ int main() {
             break;
         }
 
-        uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
-        read_n(sock, instructions, batch_size * sizeof(uint32_t));
-        printf("Got %u instructions\n", batch_size);
+        // if (batch_size > (UINT32_MAX / sizeof(uint32_t)) || 
+        //     batch_size > SOME_REASONABLE_LIMIT) {  // e.g., 1<<20
+        //     fprintf(stderr, "batch_size too large: %u\n", batch_size);
+        //     break;
+        // }
 
-        run_client(instructions, batch_size); // runs sandbox 
+        uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
+        if (!instructions) { 
+            perror("malloc"); 
+            break; 
+        }               
+        if (read_n(sock, instructions, batch_size * sizeof(uint32_t)) != 
+            (ssize_t)(batch_size * sizeof(uint32_t))) {
+            fprintf(stderr, "short read or disconnect while reading instructions\n");
+            free(instructions);
+            break;
+        }
+        printf("Got %u instructions\n", batch_size);
+        
+        // convert each network-order word instruction with ntohl
+        for (uint32_t i = 0; i < batch_size; i++) {
+            instructions[i] = ntohl(instructions[i]);
+        }
+
+        // run sandbox 
+        run_client(instructions, batch_size); 
 
         // Then send results back
-        send_log();
-        // uint32_t result_count_net = htonl(batch_size);
-        // write_n(sock, &result_count_net, sizeof(result_count_net));
-        // for (uint32_t i = 0; i < batch_size; i++) {
-        //     uint32_t val = htonl(instructions[i]);
-        //     write_n(sock, &val, sizeof(uint32_t));
-        // }    
+        send_log();   
 
-    free(instructions);
+        free(instructions);
     }
 
     close(sock);
 
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
     unmap_all_regions();                 // unmap g_regions
+    
+    free(g_regions);
+    g_regions = NULL;
+    free(g_diffs);
+    g_diffs = NULL;
 
     printf("Done\n");
     return 0;

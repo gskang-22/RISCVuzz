@@ -3,7 +3,7 @@
 
 typedef struct {
     void  *addr;
-    size_t len;
+    size_t len; // the size (in bytes) of the region that was mmap'ed
 } mapped_region_t;
 
 typedef struct {
