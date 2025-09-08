@@ -11,6 +11,9 @@ futher expansion.
 
 extern void run_sandbox();
 extern void test_start();
+extern void print_xreg_changes();
+extern void print_freg_changes();
+
 extern sigjmp_buf jump_buffer;
 extern uint64_t regs_before[32];
 extern uint64_t regs_after[32];
