@@ -4,6 +4,7 @@
 
 extern uint8_t *sandbox_ptr;
 extern mapped_region_t *g_regions;
+extern void unmap_all_regions();
 
 #define SERVER_IP "192.168.10.1" 
 #define SERVER_PORT 9000

@@ -202,9 +202,7 @@ def main():
     #     output.append(formatted_result)
     #     print("output:", formatted_result)
 
-    #     # Call check_flip N times
-    #     for _ in range(N):
-    #         check_flip(output, result, cfg)
+    #     check_flip(output, result, cfg)
 
     # except RuntimeError as e:
     #     print("Input:", asm_input, " -> Error:", e)
