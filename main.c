@@ -156,11 +156,14 @@ int main() {
             // printf("Instruction[%u] = 0x%08x\n", i, instructions[i]); // prints instructions received
         }
 
-        // run sandbox 
-        run_client(instructions, batch_size); 
-
+        // run sandbox 1
+        run_client(instructions, batch_size);    
         // Then send results back
-        send_log();   
+        send_log();
+        // run sandbox 2
+        run_client(instructions, batch_size);    
+        // Then send results back
+        send_log();
 
         free(instructions);
     }

@@ -88,8 +88,16 @@ async def handle_client(reader, writer):
             await writer.drain()
 
             # Wait for results before sending next batch
-            await read_results(reader, name)
-            
+            # await read_results(reader, name)
+            response1 = await read_results(reader, name)
+            response2 = await read_results(reader, name)
+
+                        # Compare responses
+            if response1 != response2:
+                print(f"[ERROR] Responses differ for client {name} on batch starting at index {instr_index - len(batch)}")
+            else:
+                print(f"[{name}] {response1}")
+
         print(f"All instructions sent to {name}")
 
     except asyncio.IncompleteReadError:

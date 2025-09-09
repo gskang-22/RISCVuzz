@@ -237,56 +237,59 @@ int run_client(uint32_t *instructions, size_t n_instructions)
     setup_signal_handlers();
     unmap_vdso_vvar();
 
-    // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
-    for (size_t i = 0; i < n_instructions; i++)
-    {
-        // log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
-        log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
-
-        // prepare sandbox
-        prepare_sandbox(sandbox_ptr);
-        // instrs[0] = fuzz_buffer[i];
-        instrs[0] = instructions[i];
-        inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
-        // unmap using munmap
-        unmap_all_regions(); // unmap g_regions
-
-        int jump_rc = sigsetjmp(jump_buffer, 1);
-        if (jump_rc == 0)
+    for (int i = 0; i < 2; i++) {
+                // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
+        for (size_t i = 0; i < n_instructions; i++)
         {
-            run_sandbox(sandbox_ptr);
-            continue; // no faults raised
+            // log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+            log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
+
+            // prepare sandbox
+            prepare_sandbox(sandbox_ptr);
+            // instrs[0] = fuzz_buffer[i];
+            instrs[0] = instructions[i];
+            inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+            // unmap using munmap
+            unmap_all_regions(); // unmap g_regions
+
+            int jump_rc = sigsetjmp(jump_buffer, 1);
+            if (jump_rc == 0)
+            {
+                run_sandbox(sandbox_ptr);
+                continue; // no faults raised
+            }
+            else if (jump_rc == 1 || jump_rc == 4)
+            {
+                // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
+                continue;
+            }
+
+            // SIGSEGV if code reaches here
+            run_until_quiet(0x00);
+            report_diffs(0x00);
+
+            // log_append("Mapped regions:\n");
+            // for (size_t i = 0; i < g_regions_len; i++)
+            // {
+            //     log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+            // }
+
+            prepare_sandbox(sandbox_ptr);
+            // instrs[0] = fuzz_buffer[i];
+            instrs[0] = instructions[i];
+
+            inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+            fill_all_pages(0xFF);
+            run_until_quiet(0xFF);
+            report_diffs(0xFF);
+
+            print_xreg_changes();
+            print_freg_changes();
         }
-        else if (jump_rc == 1 || jump_rc == 4)
-        {
-            // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
-            continue;
-        }
-
-        // SIGSEGV if code reaches here
-        run_until_quiet(0x00);
-        report_diffs(0x00);
-
-        // log_append("Mapped regions:\n");
-        // for (size_t i = 0; i < g_regions_len; i++)
-        // {
-        //     log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-        // }
-
-        prepare_sandbox(sandbox_ptr);
-        // instrs[0] = fuzz_buffer[i];
-        instrs[0] = instructions[i];
-
-        inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
-        fill_all_pages(0xFF);
-        run_until_quiet(0xFF);
-        report_diffs(0xFF);
-
-        print_xreg_changes();
-        print_freg_changes();
     }
+
 
     return 0;
 }
