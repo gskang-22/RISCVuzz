@@ -4,23 +4,68 @@
 
 import asyncio
 import struct
+from generate import generate_instructions
 
-BATCH_SIZE = 10
-INSTRUCTIONS = [
-    # instructions to be injected
-    0x00000013, # nop
-    0x10028027, # ghostwrite
-    0xFFFFFFFF, # illegal instruction
-    0x00008067, # ret
-    0x00050067, # jump to x10
-    0x00048067, # jump to x9
-    0x00058067, # jump to x11
-    0x0000a103, # lw x2, 0(x1)
-    0x0142b183, # ld x3, 20(x5)
-    0x01423183, # ld x3, 20(x4)
-]
+# INSTRUCTIONS = [
+#     # instructions to be injected
+#     0x00000013, # nop
+#     0x10028027, # ghostwrite
+#     0xFFFFFFFF, # illegal instruction
+#     0x00008067, # ret
+#     0x00050067, # jump to x10
+#     0x00048067, # jump to x9
+#     0x00058067, # jump to x11
+#     0x0000a103, # lw x2, 0(x1)
+#     0x0142b183, # ld x3, 20(x5)
+#     0x01423183, # ld x3, 20(x4)
+# ]
 
+instructions = []
 clients = {}  # name -> writer
+
+# Function to read your cfg file
+def read_cfg(filename):
+    cfg = {}
+    with open(filename) as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if not line or line.startswith("#"):
+                continue
+
+            if '=' in line:
+                key, value = line.split('=', 1)
+            else:
+                # Allow whitespace separator too
+                parts = line.split(None, 1)
+                if len(parts) != 2:
+                    continue
+                key, value = parts
+
+            key = key.strip()
+            value = value.strip()
+
+            # Convert lists (comma-separated)
+            if ',' in value:
+                value = [int(x) if x.strip().isdigit() or (x.strip()[0] == '-' and x.strip()[1:].isdigit()) else x.strip() for x in value.split(',')]
+            else:
+                # Convert numbers if possible
+                try:
+                    if '.' in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    # Convert booleans
+                    if value.lower() == 'true':
+                        value = True
+                    elif value.lower() == 'false':
+                        value = False
+
+            # Store in dictionary
+            cfg[key] = value
+
+    return cfg
 
 def handle_beagle_results(message):
     # Read results
@@ -55,7 +100,7 @@ async def read_results(reader, name):
     # todo: raise error and terminate
         return  # client disconnected
 
-async def handle_client(reader, writer):
+async def handle_client(reader, writer, cfg):
     # reader --> used to receive from client
     # writer --> used to send to client
 
@@ -77,9 +122,9 @@ async def handle_client(reader, writer):
     # Each client independently runs the whole list
     instr_index = 0
     try:
-        while instr_index < len(INSTRUCTIONS):
+        while instr_index < len(instructions):
             # Slice next N instructions
-            batch = INSTRUCTIONS[instr_index:instr_index + BATCH_SIZE]
+            batch = instructions[instr_index:instr_index + cfg["BATCH_SIZE"]]
             instr_index += len(batch)
 
             # Send batch
@@ -114,9 +159,19 @@ async def handle_client(reader, writer):
     print(f"Client {name} disconnected")
 
 async def main():
+
+    # open config file
+    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
+
+    global instructions
+    instructions = generate_instructions(cfg)
+
     # creates a listening socket (TCP server)
     # handle_client: callback function
-    server = await asyncio.start_server(handle_client, "0.0.0.0", 9000)
+    async def client_handler(reader, writer):
+        await handle_client(reader, writer, instructions, cfg)
+        
+    server = await asyncio.start_server(client_handler, "0.0.0.0", 9000)
     addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
     print(f"Server listening on {addrs}")
 
