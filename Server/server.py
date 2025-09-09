@@ -18,7 +18,7 @@ INSTRUCTIONS = [
     0x0000a103, # lw x2, 0(x1)
     0x0142b183, # ld x3, 20(x5)
     0x01423183, # ld x3, 20(x4)
-] * 2
+]
 
 clients = {}  # name -> writer
 
@@ -42,13 +42,14 @@ async def read_results(reader, name):
         data = await reader.readexactly(msg_len)
         # Step 3: decode and print
         message = data.decode(errors="replace")  # safe decode
-        print(f"{message}")
+        # print(f"{message}")
 
         # Handle results differently based on client name
         if name == "beagle":
             handle_beagle_results(message)
         elif name == "lichee":
             handle_lichee_results(message)
+        return message
 
     except asyncio.IncompleteReadError:
     # todo: raise error and terminate
@@ -92,11 +93,16 @@ async def handle_client(reader, writer):
             response1 = await read_results(reader, name)
             response2 = await read_results(reader, name)
 
-                        # Compare responses
+            # Compare responses
             if response1 != response2:
                 print(f"[ERROR] Responses differ for client {name} on batch starting at index {instr_index - len(batch)}")
+                print(f"Instruction set 1:")
+                print(response1)
+                print(f"Instruction set 2:")
+                print(response2)
             else:
-                print(f"[{name}] {response1}")
+                print(name)
+                print(response1)
 
         print(f"All instructions sent to {name}")
 
