@@ -206,9 +206,17 @@ void unmap_all_regions(void)
 static void run_until_quiet(int8_t fill_byte)
 {
     g_fault_addr = 0;
+    int retries = 0;
+    const int MAX_RETRIES = 20;  // set limit
 
     while (1)
     {
+
+        if (++retries > MAX_RETRIES) {
+            printf("Max retries exceeded, aborting run_until_quiet\n");
+            break;
+        }
+
         int jump_rc = sigsetjmp(jump_buffer, 1);
 
         if (jump_rc == 0)
