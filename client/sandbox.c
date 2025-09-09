@@ -181,7 +181,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     {
     case SIGILL:
         log_append("Caught SIGILL (Illegal Instruction)\n");
-        log_append("Faulting address: %p\n", fault_addr);
+        // log_append("Faulting address: %p\n", fault_addr);
         break;
     case SIGBUS:
         log_append("Caught SIGBUS (Bus Error)\n");
@@ -194,7 +194,7 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         break;
     case SIGSEGV:
         log_append("Caught SIGSEGV (Segmentation Fault)\n");
-        log_append("Faulting address: %p\n", fault_addr);
+        // log_append("Faulting address: %p\n", fault_addr);
 
         if (pc == (uintptr_t)fault_addr) {
             // PC has escaped from sandbox; abort
@@ -275,6 +275,9 @@ void print_xreg_changes(void)
 {
     for (int i = 0; i < 32; i++)
     {
+        if (i == 9)  // skip x9
+            continue;
+
         if (xreg_init_data[i] != xreg_output_data[i])
         {
             log_append("%-4s changed: 0x%016lx -> 0x%016lx\n",
