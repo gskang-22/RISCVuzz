@@ -93,10 +93,14 @@ int main() {
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     sandbox_ptr = allocate_executable_buffer();
 #ifdef TESTING
-    uint32_t [instructions] = {
+    uint32_t instructions[] = {
     // instructions to be injected
     0x00000013, // nop
 };
+
+    printf("Running sandbox 1...\n");
+    fflush(stdout);
+    run_client(instructions, sizeof(instructions) / sizeof(instructions[0]));  
 #endif
 #ifndef TESTING
     // creates a new socket (IPv4, TCP)
@@ -166,13 +170,11 @@ int main() {
             instructions[i] = ntohl(instructions[i]);
             // printf("Instruction[%u] = 0x%08x\n", i, instructions[i]); // prints instructions received
         }
-#endif
         // run sandbox 1
         printf("Running sandbox 1...\n");
         fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
-#ifndef TESTING
         send_log(); // send results back
         // run sandbox 2
         printf("Running sandbox 2..\n");
