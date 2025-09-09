@@ -20,7 +20,6 @@ from generate import generate_instructions
 #     0x01423183, # ld x3, 20(x4)
 # ]
 
-instructions = []
 clients = {}  # name -> writer
 
 # Function to read your cfg file
@@ -100,7 +99,7 @@ async def read_results(reader, name):
     # todo: raise error and terminate
         return  # client disconnected
 
-async def handle_client(reader, writer, cfg):
+async def handle_client(reader, writer, instructions, cfg):
     # reader --> used to receive from client
     # writer --> used to send to client
 
@@ -126,7 +125,7 @@ async def handle_client(reader, writer, cfg):
             # Slice next N instructions
             batch = instructions[instr_index:instr_index + cfg["BATCH_SIZE"]]
             instr_index += len(batch)
-
+            print(f"instr_index: {instr_index}")
             # Send batch
             header = struct.pack("!I", len(batch))
             payload = b"".join(struct.pack("!I", inst) for inst in batch)
@@ -146,7 +145,7 @@ async def handle_client(reader, writer, cfg):
                 print(f"Instruction set 2:")
                 print(response2)
             else:
-                print(name)
+                print(f"{name}: responses are the same")
                 print(response1)
 
         print(f"All instructions sent to {name}")
@@ -163,14 +162,14 @@ async def main():
     # open config file
     cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
 
-    global instructions
     instructions = generate_instructions(cfg)
+    print([f"0x{inst:08x}" for inst in instructions])
 
     # creates a listening socket (TCP server)
     # handle_client: callback function
     async def client_handler(reader, writer):
         await handle_client(reader, writer, instructions, cfg)
-        
+
     server = await asyncio.start_server(client_handler, "0.0.0.0", 9000)
     addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
     print(f"Server listening on {addrs}")

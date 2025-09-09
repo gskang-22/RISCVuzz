@@ -60,6 +60,12 @@ void log_append(const char *fmt, ...) {
 int send_log() {
     if (log_len == 0) return 0;
 
+    // Print log locally first
+    printf("=== CLIENT LOG START ===\n");
+    fwrite(log_buffer, 1, log_len, stdout);  // print raw buffer
+    printf("\n=== CLIENT LOG END ===\n");
+    fflush(stdout);
+
     // Send length prefix (network byte order)
     uint32_t len_net = htonl((uint32_t)log_len);
     if (write_n(sock, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;

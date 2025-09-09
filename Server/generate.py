@@ -55,15 +55,18 @@ def flip_endian_32(w):
     b3 = (w & 0xFF000000) >> 24
     return (b0 | b1 | b2 | b3) & 0xFFFFFFFF
 
-def check_flip(output, result, cfg):
+def check_flip(instructions, result, cfg):
     if random.random() < cfg["FLIP_PROBABILITY"]:
         # randomly flip bits, increasing number and randomness of instructions generated
-        result = flip_bits(result, cfg)
-        output.append("0x{:08x}".format(result & 0xffffffff))
+        result_flipped = flip_bits(result, cfg)
+        instructions.append(result_flipped & 0xffffffff)
+        # output.append("0x{:08x}".format(result & 0xffffffff))
+
     if random.random() < cfg["ENDIAN_PROBABILITY"]:
         # flip endianess of instruction
-        result = flip_endian_32(result)
-        output.append("0x{:08x}".format(result & 0xffffffff))
+        result_endian = flip_endian_32(result)
+        # output.append("0x{:08x}".format(result & 0xffffffff))
+        instructions.append(result_endian & 0xffffffff)
 
 BASE_INSTRUCTIONS = [
     "ADD", "SUB", "SLL", "XOR", "SRL", "SRA", "OR", "AND", "ADDI", "XORI",
@@ -143,7 +146,7 @@ def generate_instructions(cfg):
     for _ in range(cfg["TOTAL_INSTRUCTIONS"]):
         # Randomly select one instruction
         asm_input = random.choice(all_instructions)
-        print("Selected Input:", asm_input)
+        # print("Selected Input:", asm_input)
         try:
             # Determine which function to call
             if asm_input in VECTOR_INSTRUCTIONS:
