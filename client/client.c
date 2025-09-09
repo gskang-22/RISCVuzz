@@ -240,7 +240,8 @@ int run_client(uint32_t *instructions, size_t n_instructions)
     // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     for (size_t i = 0; i < n_instructions; i++)
     {
-        // log_append("=== Running fuzz %zu: 0x%08x ===\n", i, fuzz_buffer[i]);
+        printf("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
+        fflush(stdout);
         log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
 
         // prepare sandbox
