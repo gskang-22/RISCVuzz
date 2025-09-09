@@ -86,7 +86,6 @@ int main() {
 
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     sandbox_ptr = allocate_executable_buffer();
-    log_append("sandbox ptr: %p\n", sandbox_ptr);
 
     // creates a new socket (IPv4, TCP)
     // sock: file descriptor used to send/receive
@@ -157,13 +156,13 @@ int main() {
         }
 
         // run sandbox 1
+        log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
-        // Then send results back
-        send_log();
+        send_log(); // send results back
         // run sandbox 2
+        log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
-        // Then send results back
-        send_log();
+        send_log(); // send results back
 
         free(instructions);
     }
