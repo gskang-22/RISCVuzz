@@ -160,7 +160,7 @@ def generate_instructions(cfg):
             final_result = result & 0xffffffff
             instructions.append(final_result)
 
-            check_flip(instructions, result, cfg)
+            # check_flip(instructions, result, cfg)
 
         except RuntimeError as e:
             print("Input:", asm_input, " -> Error:", e)

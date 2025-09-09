@@ -1,7 +1,7 @@
 #include "main.h"
 #include "client.h"
 #include "sandbox.h"
-
+#define TESTING
 extern uint8_t *sandbox_ptr;
 extern mapped_region_t *g_regions;
 extern memdiff_t *g_diffs;
@@ -92,7 +92,13 @@ int main() {
 
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     sandbox_ptr = allocate_executable_buffer();
-
+#ifdef TESTING
+    uint32_t [instructions] = {
+    // instructions to be injected
+    0x00000013, // nop
+};
+#endif
+#ifndef TESTING
     // creates a new socket (IPv4, TCP)
     // sock: file descriptor used to send/receive
     sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -160,12 +166,13 @@ int main() {
             instructions[i] = ntohl(instructions[i]);
             // printf("Instruction[%u] = 0x%08x\n", i, instructions[i]); // prints instructions received
         }
-
+#endif
         // run sandbox 1
         printf("Running sandbox 1...\n");
         fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
+#ifndef TESTING
         send_log(); // send results back
         // run sandbox 2
         printf("Running sandbox 2..\n");
@@ -173,12 +180,11 @@ int main() {
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
         send_log(); // send results back
-
         free(instructions);
     }
 
     close(sock);
-
+#endif
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
     unmap_all_regions();                 // unmap g_regions
 
