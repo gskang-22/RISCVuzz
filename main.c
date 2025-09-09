@@ -162,10 +162,14 @@ int main() {
         }
 
         // run sandbox 1
+        printf("Running sandbox 1...\n");
+        fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
         send_log(); // send results back
         // run sandbox 2
+        printf("Running sandbox 2..\n");
+        fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);    
         send_log(); // send results back
