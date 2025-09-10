@@ -6,19 +6,19 @@ import asyncio
 import struct
 from generate import generate_instructions
 
-# INSTRUCTIONS = [
-#     # instructions to be injected
-#     0x00000013, # nop
-#     0x10028027, # ghostwrite
-#     0xFFFFFFFF, # illegal instruction
-#     0x00008067, # ret
-#     0x00050067, # jump to x10
-#     0x00048067, # jump to x9
-#     0x00058067, # jump to x11
-#     0x0000a103, # lw x2, 0(x1)
-#     0x0142b183, # ld x3, 20(x5)
-#     0x01423183, # ld x3, 20(x4)
-# ]
+instructions = [
+    # instructions to be injected
+    0x00000013, # nop
+    0x10028027, # ghostwrite
+    0xFFFFFFFF, # illegal instruction
+    0x00008067, # ret
+    0x00050067, # jump to x10
+    0x00048067, # jump to x9
+    0x00058067, # jump to x11
+    0x0000a103, # lw x2, 0(x1)
+    0x0142b183, # ld x3, 20(x5)
+    0x00dd31af,
+]
 
 clients = {}  # name -> writer
 
@@ -161,9 +161,9 @@ async def main():
 
     # open config file
     cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
-
-    instructions = generate_instructions(cfg)
-    print([f"0x{inst:08x}" for inst in instructions])
+    global instructions
+    # instructions = generate_instructions(cfg)
+    # print([f"0x{inst:08x}" for inst in instructions])
 
     # creates a listening socket (TCP server)
     # handle_client: callback function

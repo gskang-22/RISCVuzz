@@ -20,9 +20,9 @@ extern uint64_t regs_after[32];
 
 extern uint32_t fuzz_buffer2[];
 extern size_t fuzz_buffer_len;
+extern uint64_t xreg_init_data[];
 
-#define BUFFER_SIZE 64 // Number of elements in the random buffer
-uint32_t fuzz_buffer3[BUFFER_SIZE];
+#define SANDBOX_STACK_SIZE 1024
 uint8_t *sandbox_ptr;
 
 extern size_t sandbox_pages;
@@ -248,6 +248,9 @@ int run_client(uint32_t *instructions, size_t n_instructions)
     // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     for (size_t i = 0; i < n_instructions; i++)
     {
+        uint8_t sandbox_stack[SANDBOX_STACK_SIZE];
+        void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
+        xreg_init_data[2] = (uint64_t)sandbox_sp;
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
         fflush(stdout);
         log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
