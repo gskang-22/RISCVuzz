@@ -58,18 +58,6 @@ ssize_t read_n(int fd, void *buf, size_t n) {
     return total;
 }
 
-ssize_t read_exact(int fd, void *buf, size_t n) {
-    size_t total = 0;
-    char *p = buf;
-    while (total < n) {
-        ssize_t r = read(fd, p + total, n - total);
-        if (r < 0) { perror("read"); return -1; }
-        if (r == 0) { usleep(1000); continue; } // no data yet
-        total += r;
-    }
-    return total;
-}
-
 ssize_t write_n(int fd, const void *buf, size_t n) {
     size_t total = 0;
     while (total < n) {
@@ -157,7 +145,7 @@ int main() {
     // loop: receive instructions, send back results 
     while (1) {
         uint32_t batch_size_net;
-        write_n(serial_fd, &batch_size_net, sizeof(batch_size_net));
+        read_n(serial_fd, &batch_size_net, sizeof(batch_size_net));
 
         uint32_t batch_size = ntohl(batch_size_net);
         printf("Batch size: %u\n", batch_size);
@@ -175,13 +163,8 @@ int main() {
             perror("malloc"); 
             break; 
         }               
-        if (read_exact(serial_fd, instructions, batch_size * sizeof(uint32_t)) != 
-            (ssize_t)(batch_size * sizeof(uint32_t))) {
-            fprintf(stderr, "short read or disconnect while reading instructions\n");
-            fflush(stdout);
-            free(instructions);
-            break;
-        }
+
+        read_n(serial_fd, instructions, batch_size * sizeof(uint32_t));
         printf("Got %u instructions\n", batch_size);
         fflush(stdout);
 
