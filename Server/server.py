@@ -120,11 +120,14 @@ async def handle_uart(port, board_name, instructions, cfg):
             batch = instructions[instr_index:instr_index + cfg["BATCH_SIZE"]]
             instr_index += len(batch)
 
-            # Send
-            payload = b"".join(struct.pack("!I", inst) for inst in batch)
-            write_msg(writer, payload)
+            # Send batch size as number of instructions
+            writer.write(struct.pack("!I", len(batch)))
             await writer.drain()
-            print(f"[{port}] Sent batch (index {instr_index})")
+
+            # Then send instructions
+            payload = b"".join(struct.pack("!I", inst) for inst in batch)
+            writer.write(payload)
+            await writer.drain()
 
             # Wait for 2 replies
             response1 = await read_results(reader, board_name, port)
@@ -141,6 +144,7 @@ async def handle_uart(port, board_name, instructions, cfg):
 
         print(f"[{port}] All instructions sent")
         writer.write(struct.pack("!I", 0))  # 4-byte length of 0
+        await writer.drain()
 
     finally:
         writer.close()
