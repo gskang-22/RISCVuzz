@@ -1,22 +1,58 @@
+import serial
+import struct
+
+SERIAL_PORT = "/dev/ttyUSB0"
+BAUD = 115200
+
+ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+
+def write_msg(ser, payload: bytes):
+    header = struct.pack("!I", len(payload))
+    ser.write(header + payload)
+
+def read_msg(ser):
+    header = ser.read(4)
+    if len(header) < 4:
+        return None
+    (length,) = struct.unpack("!I", header)
+    data = ser.read(length)
+    if len(data) < length:
+        return None
+    return data
+
+# Example loop
+while True:
+    # Send instructions
+    instructions = [0x00dd31af]
+    payload = b"".join(struct.pack("!I", i) for i in instructions)
+    write_msg(ser, payload)
+    print("Sent batch")
+
+    # Wait for result
+    resp = read_msg(ser)
+    if resp:
+        print("Got:", resp.decode(errors="replace"))
+
+
 # Aim: 
 #     1. Generate test cases for the client to run 
 #     2. Analyze the results sent back by client, and compare them (if there are multiple boards) 
-
+"""
 import asyncio
 import struct
 from generate import generate_instructions
 
 instructions = [
     # instructions to be injected
-    0x00000013, # nop
-    0x10028027, # ghostwrite
-    0xFFFFFFFF, # illegal instruction
-    0x00008067, # ret
-    0x00050067, # jump to x10
-    0x00048067, # jump to x9
-    0x00058067, # jump to x11
-    0x0000a103, # lw x2, 0(x1)
-    0x0142b183, # ld x3, 20(x5)
+    # 0x00000013, # nop
+    # 0x10028027, # ghostwrite
+    # 0xFFFFFFFF, # illegal instruction
+    # 0x00008067, # ret
+    # 0x00050067, # jump to x10
+    # 0x00048067, # jump to x9
+    # 0x00058067, # jump to x11
+    # 0x0000a103, # lw x2, 0(x1)
+    # 0x0142b183, # ld x3, 20(x5)
     0x00dd31af,
 ]
 
@@ -180,3 +216,4 @@ async def main():
 
 # spawns handle_client() per connection
 asyncio.run(main())
+"""

@@ -1,7 +1,10 @@
 #include "main.h"
 #include "client.h"
 #include "sandbox.h"
-#define TESTING
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 extern uint8_t *sandbox_ptr;
 extern mapped_region_t *g_regions;
 extern memdiff_t *g_diffs;
@@ -12,9 +15,38 @@ extern void unmap_all_regions();
 
 #define LOG_BUF_SIZE 4096
 
-int sock;
+// int sock;
+int serial_fd;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0;  // current length of string in buffer
+
+int open_serial(const char *device, int baud) {
+    int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0) { perror("open"); return -1; }
+
+    struct termios tty;
+    if (tcgetattr(fd, &tty) != 0) { perror("tcgetattr"); close(fd); return -1; }
+
+    cfsetospeed(&tty, B115200);
+    cfsetispeed(&tty, B115200);
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
+    tty.c_iflag &= ~IGNBRK;         // disable break processing
+    tty.c_lflag = 0;                // no signaling chars, no echo, no canonical
+    tty.c_oflag = 0;                // no remapping, no delays
+    tty.c_cc[VMIN]  = 1;            // read doesn't block
+    tty.c_cc[VTIME] = 5;            // 0.5s timeout
+
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+    tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls, enable reading
+    tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) { perror("tcsetattr"); close(fd); return -1; }
+    return fd;
+}
 
 ssize_t read_n(int fd, void *buf, size_t n) {
     size_t total = 0;
@@ -68,9 +100,9 @@ int send_log() {
 
     // Send length prefix (network byte order)
     uint32_t len_net = htonl((uint32_t)log_len);
-    if (write_n(sock, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
+    if (write_n(serial_fd, &len_net, sizeof(len_net)) != sizeof(len_net)) return -1;
     // Send the buffer itself
-    if (write_n(sock, log_buffer, log_len) != (ssize_t)log_len) return -1;
+    if (write_n(serial_fd, log_buffer, log_len) != (ssize_t)log_len) return -1;
 
     log_len = 0;  // reset after sending
     log_buffer[0] = '\0';
@@ -81,10 +113,10 @@ int send_log() {
     // send_log(sock);  // send accumulated logs to server
 }
 
-int send_string(int sock, const char *msg) {
+int send_string(int serial_fd, const char *msg) {
     uint32_t len = htonl(strlen(msg));   // 4-byte length prefix
-    if (write(sock, &len, sizeof(len)) != sizeof(len)) return -1;  // send length
-    if (write(sock, msg, strlen(msg)) != (ssize_t)strlen(msg)) return -1; // send string
+    if (write(serial_fd, &len, sizeof(len)) != sizeof(len)) return -1;  // send length
+    if (write(socserial_fdk, msg, strlen(msg)) != (ssize_t)strlen(msg)) return -1; // send string
     return 0;
 }
 
@@ -105,18 +137,20 @@ int main() {
 #ifndef TESTING
     // creates a new socket (IPv4, TCP)
     // sock: file descriptor used to send/receive
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) { perror("socket"); exit(1); }
+    // sock = socket(AF_INET, SOCK_STREAM, 0);
+    // if (sock < 0) { perror("socket"); exit(1); }
+    serial_fd = open_serial("/dev/ttyS0", 115200);
+    if (serial_fd < 0) exit(1);
 
     struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERVER_PORT);
     inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
     
-    // attempt to establish TCP connection
-    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect"); close(sock); exit(1);
-    }
+    // // attempt to establish TCP connection
+    // if (connect(serial_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    //     perror("connect"); close(serial_fd); exit(1);
+    // }
 
     // connection successful
     printf("Connected to server\n");
@@ -127,14 +161,14 @@ int main() {
     // send client name for identification
     const char *name = "beagle";
     uint32_t len = htonl(strlen(name));
-    write_n(sock, &len, sizeof(len));   // send length
-    write_n(sock, name, strlen(name));  // send name
+    write_n(serial_fd, &len, sizeof(len));   // send length
+    write_n(serial_fd, name, strlen(name));  // send name
 
     // loop: receive instructions, send back results 
     while (1) {
         uint32_t batch_size_net;
         // closes client if server closed connection
-        if (read_n(sock, &batch_size_net, sizeof(batch_size_net)) != sizeof(batch_size_net)) {
+        if (read_n(serial_fd, &batch_size_net, sizeof(batch_size_net)) != sizeof(batch_size_net)) {
             printf("Server closed connection\n");
             break;
         }
@@ -157,7 +191,7 @@ int main() {
             perror("malloc"); 
             break; 
         }               
-        if (read_n(sock, instructions, batch_size * sizeof(uint32_t)) != 
+        if (read_n(serial_fd, instructions, batch_size * sizeof(uint32_t)) != 
             (ssize_t)(batch_size * sizeof(uint32_t))) {
             fprintf(stderr, "short read or disconnect while reading instructions\n");
             free(instructions);
@@ -185,7 +219,7 @@ int main() {
         free(instructions);
     }
 
-    close(sock);
+    close(serial_fd);
 #endif
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
     unmap_all_regions();                 // unmap g_regions
