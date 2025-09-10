@@ -140,6 +140,7 @@ async def handle_uart(port, board_name, instructions, cfg):
                 print(f"[{board_name}] OK: responses match")
 
         print(f"[{port}] All instructions sent")
+        writer.write(struct.pack("!I", 0))  # 4-byte length of 0
 
     finally:
         writer.close()

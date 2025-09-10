@@ -140,15 +140,18 @@ int main() {
     
     // connection successful
     printf("Connected to server\n");
+    fflush(stdout);
 
     // loop: receive instructions, send back results 
     while (1) {
         uint32_t batch_size_net;
-        // closes client if server closed connection
-        if (read_n(serial_fd, &batch_size_net, sizeof(batch_size_net)) != sizeof(batch_size_net)) {
-            printf("Server closed connection\n");
-            break;
-        }
+        ssize_t r = read(serial_fd, &batch_size_net, sizeof(batch_size_net));
+        printf("Raw bytes: %02x %02x %02x %02x\n",
+            ((unsigned char*)&batch_size_net)[0],
+            ((unsigned char*)&batch_size_net)[1],
+            ((unsigned char*)&batch_size_net)[2],
+            ((unsigned char*)&batch_size_net)[3]);
+        fflush(stdout);
         
         // alternative way to close client: send batch size of 0
         uint32_t batch_size = ntohl(batch_size_net);
@@ -156,12 +159,6 @@ int main() {
             printf("No more instructions\n");
             break;
         }
-
-        // if (batch_size > (UINT32_MAX / sizeof(uint32_t)) || 
-        //     batch_size > SOME_REASONABLE_LIMIT) {  // e.g., 1<<20
-        //     fprintf(stderr, "batch_size too large: %u\n", batch_size);
-        //     break;
-        // }
 
         uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
         if (!instructions) { 
@@ -175,7 +172,8 @@ int main() {
             break;
         }
         printf("Got %u instructions\n", batch_size);
-        
+        fflush(stdout);
+
         // convert each network-order word instruction with ntohl
         for (uint32_t i = 0; i < batch_size; i++) {
             instructions[i] = ntohl(instructions[i]);
