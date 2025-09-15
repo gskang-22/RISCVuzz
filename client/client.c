@@ -9,6 +9,7 @@ futher expansion.
 #include "sandbox.h"
 #include "../main.h"
 #include <stdatomic.h>
+#include <stdatomic.h>
 #include <errno.h>
 
 extern void run_sandbox();
@@ -25,6 +26,7 @@ extern size_t fuzz_buffer_len;
 extern uint64_t xreg_init_data[];
 extern uint64_t xreg_output_data[];
 
+//#define SANDBOX_STACK_SIZE 1024
 // #define SANDBOX_STACK_SIZE 1024
 uint8_t *sandbox_ptr;
 
@@ -81,6 +83,12 @@ static void report_diffs(uint8_t expected)
             fflush(stdout);
             continue;
         }
+
+        uint8_t *p = (uint8_t *)g_regions[i].addr;
+        size_t n = g_regions[i].len;
+            
+        if ((uintptr_t)p % page_size != 0 || n % page_size != 0) {
+            printf("WARNING: misaligned region %zu: addr=%p len=%zu\n", i, p, n);
         if (((uintptr_t)base % page_size) != 0 || (len % page_size) != 0)
         {
             printf("Skipping misaligned region %zu: addr=%p len=%zu\n", i, base, len);
