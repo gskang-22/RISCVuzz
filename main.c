@@ -161,6 +161,7 @@ int main()
 
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     if (!g_regions) { perror("calloc g_regions"); exit(1); }
+    g_regions_len = 0;
     
     sandbox_ptr = allocate_executable_buffer();
 #ifdef TESTING

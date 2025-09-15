@@ -8,6 +8,8 @@ futher expansion.
 #include "client.h"
 #include "sandbox.h"
 #include "../main.h"
+#include <stdatomic.h>
+#include <errno.h>
 
 extern void run_sandbox();
 extern void test_start();
@@ -21,8 +23,9 @@ extern uint64_t regs_after[32];
 extern uint32_t fuzz_buffer2[];
 extern size_t fuzz_buffer_len;
 extern uint64_t xreg_init_data[];
+extern uint64_t xreg_output_data[];
 
-#define SANDBOX_STACK_SIZE 1024
+// #define SANDBOX_STACK_SIZE 1024
 uint8_t *sandbox_ptr;
 
 extern size_t sandbox_pages;
@@ -61,40 +64,107 @@ static void diffs_push(void *addr, uint8_t oldv, uint8_t newv)
 static void report_diffs(uint8_t expected)
 {
     g_diffs_len = 0;
+
+    /* sanity checks */
+    if (g_regions == NULL) {
+        log_append("report_diffs_safe: no g_regions\n");
+        return;
+    }
+
     for (size_t i = 0; i < g_regions_len; i++)
     {
-        if (g_regions[i].addr == NULL || g_regions[i].len == 0) {
+        void *base = g_regions[i].addr;
+        size_t len = g_regions[i].len;
+
+        if (base == NULL || len == 0) {
             printf("Skipping invalid region %zu\n", i);
+            fflush(stdout);
+            continue;
+        }
+        if (((uintptr_t)base % page_size) != 0 || (len % page_size) != 0)
+        {
+            printf("Skipping misaligned region %zu: addr=%p len=%zu\n", i, base, len);
             fflush(stdout);
             continue;
         }
 
         uint8_t *p = (uint8_t *)g_regions[i].addr;
-        size_t n = g_regions[i].len;
-            
-        if ((uintptr_t)p % page_size != 0 || n % page_size != 0) {
-            printf(stderr, "WARNING: misaligned region %zu: addr=%p len=%zu\n", i, p, n);
-            fflush(stdout);
-            continue;
-        }
+        size_t pages = len / page_size;
 
-        for (size_t j = 0; j < n; j++)
+        for (size_t pg = 0; pg < pages; ++pg)
         {
-            volatile uint8_t newv = p[j];
-            if (newv != expected)
+            uint8_t sample = 0;
+            uint8_t *page_addr = p + pg * page_size;
+
+            /* probe the first byte of the page before scanning */
+            if (!probe_read_byte(page_addr, &sample))
             {
-                void *absaddr = (uint8_t *)g_regions[i].addr + j;
-                diffs_push(absaddr, expected, newv);
+                printf("Skipping page %zu of region %zu at %p (probe failed)\n",
+                           pg, i, page_addr);
+                fflush(stdout);
+                continue;
+            }
+
+            /* If probe succeeded, scan that page safely in a loop.
+               If scanning the rest of the page faults, probe_read_byte will
+               catch that on the next page loop (we still try to be conservative). */
+            for (size_t off = 0; off < page_size; ++off)
+            {
+                uint8_t newv;
+                /* small optimization: we already read page_addr[0] */
+                if (off == 0)
+                {
+                    newv = sample;
+                }
+                else
+                {
+                    int rc2 = sigsetjmp(jump_buffer, 1);
+                    if (rc2 == 0)
+                    {
+                        volatile uint8_t v = page_addr[off];
+                        newv = (uint8_t)v;
+                    }
+                    else
+                    {
+                        log_append("Fault while scanning page %zu offset %zu; skipping rest of page\n", pg, off);
+                        break;
+                    }
+                }
+
+                if (newv != expected)
+                {
+                    void *absaddr = page_addr + off;
+                    diffs_push(absaddr, expected, newv);
+                }
             }
         }
     }
 
+    /* Print diffs */
     for (size_t k = 0; k < g_diffs_len; k++)
     {
-        log_append("CHG: addr=%p old=0x%02x new=0x%02x\n",
-                g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
-
+        printf("CHG: addr=%p old=0x%02x new=0x%02x\n",
+                   g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
+        fflush(stdout);
     }
+
+    //     for (size_t j = 0; j < n; j++)
+    //     {
+    //         volatile uint8_t newv = p[j];
+    //         if (newv != expected)
+    //         {
+    //             void *absaddr = (uint8_t *)g_regions[i].addr + j;
+    //             diffs_push(absaddr, expected, newv);
+    //         }
+    //     }
+    // }
+
+    // for (size_t k = 0; k < g_diffs_len; k++)
+    // {
+    //     log_append("CHG: addr=%p old=0x%02x new=0x%02x\n",
+    //             g_diffs[k].addr, g_diffs[k].old_val, g_diffs[k].new_val);
+
+    // }
 }
 
 static bool region_exists(void *addr)
@@ -119,35 +189,41 @@ static void map_two_pages(void *base, uint8_t fill_byte)
     if (g_regions_len >= MAX_MAPPED_PAGES)
         return;
 
-    if (!region_exists(base))
-    {
-        void *r = mmap(base, 2 * page_size,
-                       PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, // MAP_FIXED
-                       -1, 0);
-        log_append("mapping: %p\n", r);
-        if (r == MAP_FAILED)
-        {
-            perror("mmap failed for lazy mapping");
-            siglongjmp(jump_buffer, 4); // abort / skip this test case
-        }
-        else
-        {
-            log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
-                   (unsigned long)(uintptr_t)base,
-                   (unsigned long)(uintptr_t)r);
+    /* if region exists at exactly this base, skip */
+    if (region_exists(base))
+        return;
 
-            // add region to g_regions array
-            if (g_regions_len < MAX_MAPPED_PAGES)
-            {
-                g_regions[g_regions_len].addr = r;
-                g_regions[g_regions_len].len = 2 * page_size;
-                g_regions_len++;
-            }
-            // fill region with fill_byte
-            memset(r, fill_byte, 2 * page_size);
-        }
+    void *r = mmap(base, 2 * page_size,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, // MAP_FIXED
+                    -1, 0);
+    log_append("mapping: %p\n", r);
+    if (r == MAP_FAILED)
+    {
+        int e = errno;
+        log_append("mmap failed (requested %p): errno=%d (%s)\n", base, e, strerror(e));
+
+        // perror("mmap failed for lazy mapping");
+        siglongjmp(jump_buffer, 4); // abort / skip this test case
     }
+
+    log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+            (unsigned long)(uintptr_t)base,
+            (unsigned long)(uintptr_t)r);
+
+    /* Store the actual returned address (r), not the requested base */
+    if (g_regions_len < MAX_MAPPED_PAGES)
+    {
+        g_regions[g_regions_len].addr = r;
+        g_regions[g_regions_len].len = 2 * page_size;
+        g_regions_len++;
+    } else {
+        log_append("WARNING: region capacity exhausted\n");
+        /* still write to the mapping to initialize it */
+    }
+
+    // fill region with fill_byte
+    memset(r, fill_byte, 2 * page_size);
 }
 
 // fills all pages in g_region with fill_byte
@@ -305,6 +381,17 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         fill_all_pages(0xFF);
         run_until_quiet(0xFF);
         // report_diffs(0xFF);
+
+
+
+        printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
+           g_regions_len, g_diffs_cap, g_diffs_len);
+        fflush(stdout);
+        if (xreg_init_data == NULL || xreg_output_data == NULL) {
+            log_append("WARNING: xreg pointers NULL; skipping print_xreg_changes\n");
+        } else {
+            print_xreg_changes();
+        }
 
         // print_xreg_changes();
         // print_freg_changes();
