@@ -6,7 +6,7 @@ from generate import generate_instructions
 # Map UART ports to board names
 UART_PORTS = {
     # "/dev/ttyUSB0": "lichee",
-    "/dev/ttyUSB1": "beagle",
+    "/dev/ttyUSB0": "beagle",
 }
 BAUD = 115200
 
@@ -120,18 +120,26 @@ async def handle_uart(port, board_name, instructions, cfg):
             batch = instructions[instr_index:instr_index + cfg["BATCH_SIZE"]]
             instr_index += len(batch)
 
-            # Send batch size as number of instructions
-            writer.write(struct.pack("!I", len(batch)))
-            await writer.drain()
+            # # Send batch size as number of instructions
+            # writer.write(struct.pack("!I", len(batch)))
+            # await writer.drain()
 
-            # Then send instructions
+            # # Then send instructions
+            # payload = b"".join(struct.pack("!I", inst) for inst in batch)
+            # writer.write(payload)
+            # await writer.drain()
+
+            # Send batch length + instructions
             payload = b"".join(struct.pack("!I", inst) for inst in batch)
-            writer.write(payload)
+            writer.write(struct.pack("!I", len(batch)) + payload)
             await writer.drain()
+            print(f"[{port}] Sent batch (index {instr_index})")
 
             # Wait for 2 replies
             response1 = await read_results(reader, board_name, port)
+            print("response1 received")
             response2 = await read_results(reader, board_name, port)
+            print("response2 received")
 
             if response1 is None or response2 is None:
                 break

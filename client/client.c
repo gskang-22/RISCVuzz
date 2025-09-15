@@ -144,7 +144,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
     {
         void *r = mmap(base, 2 * page_size,
                        PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, // MAP_FIXED_NOREPLACE
+                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, // MAP_FIXED
                        -1, 0);
         // log_append("mapping: %p\n", r);
         if (r == MAP_FAILED)
