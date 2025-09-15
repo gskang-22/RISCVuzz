@@ -29,36 +29,13 @@ extern size_t sandbox_pages;
 extern size_t page_size;
 
 volatile sig_atomic_t g_faults_this_run = 0;
-volatile uintptr_t g_fault_addr = 0;
+volatile atomic_uintptr_t g_fault_addr = 0;
 mapped_region_t *g_regions = NULL;
 static size_t g_regions_len = 0; // global counter variable (number of valid entries currently stored in the g_regions array)
 
 memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0;
 static size_t g_diffs_cap = 0;
-
-uint32_t rand32()
-{
-    // rand() typically returns 15-bit values, so combine to get 32 bits
-    uint32_t r = ((uint32_t)rand() & 0x7FFF);
-    r |= ((uint32_t)rand() & 0x7FFF) << 15;
-    r |= ((uint32_t)rand() & 0x3) << 30; // Only need 2 more bits
-    return r;
-}
-
-uint32_t fuzz_buffer[] = {
-    // instructions to be injected
-    0x00000013, // nop
-    0x10028027, // ghostwrite
-    0xFFFFFFFF, // illegal instruction
-    0x00008067, // ret
-    0x00050067, // jump to x10
-    0x00048067, // jump to x9
-    0x00058067, // jump to x11
-    0x0000a103, // lw x2, 0(x1)
-    0x0142b183, // ld x3, 20(x5)
-    0x01423183, // ld x3, 20(x4)
-};
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
@@ -67,26 +44,15 @@ uint32_t instrs[] = {
     0x00048067 // jalr x0, 0(x9)
 };
 
-void print_registers(const char *label, uint64_t regs[32])
-{
-    // log_append("=== %s ===\n", label);
-    for (int i = 0; i < 32; i++)
-    {
-        log_append("%-10s: 0x%016lx\n", reg_names[i], regs[i]);
-    }
-}
-
 static void diffs_push(void *addr, uint8_t oldv, uint8_t newv)
 {
     if (g_diffs_len == g_diffs_cap)
     {
         size_t ncap = g_diffs_cap ? g_diffs_cap * 2 : 256;
-        g_diffs = realloc(g_diffs, ncap * sizeof(*g_diffs));
-        if (!g_diffs)
-        {
-            perror("realloc");
-            exit(1);
-        }
+        memdiff_t *tmp = realloc(g_diffs, ncap * sizeof(*g_diffs));
+        if (!tmp) { perror("realloc"); exit(1); }
+
+        g_diffs = tmp;
         g_diffs_cap = ncap;
     }
     g_diffs[g_diffs_len++] = (memdiff_t){addr, oldv, newv};
@@ -97,11 +63,24 @@ static void report_diffs(uint8_t expected)
     g_diffs_len = 0;
     for (size_t i = 0; i < g_regions_len; i++)
     {
+        if (g_regions[i].addr == NULL || g_regions[i].len == 0) {
+            printf("Skipping invalid region %zu\n", i);
+            fflush(stdout);
+            continue;
+        }
+
         uint8_t *p = (uint8_t *)g_regions[i].addr;
         size_t n = g_regions[i].len;
+            
+        if ((uintptr_t)p % page_size != 0 || n % page_size != 0) {
+            printf(stderr, "WARNING: misaligned region %zu: addr=%p len=%zu\n", i, p, n);
+            fflush(stdout);
+            continue;
+        }
+
         for (size_t j = 0; j < n; j++)
         {
-            uint8_t newv = p[j];
+            volatile uint8_t newv = p[j];
             if (newv != expected)
             {
                 void *absaddr = (uint8_t *)g_regions[i].addr + j;
@@ -146,7 +125,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                        PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, // MAP_FIXED
                        -1, 0);
-        // log_append("mapping: %p\n", r);
+        log_append("mapping: %p\n", r);
         if (r == MAP_FAILED)
         {
             perror("mmap failed for lazy mapping");
@@ -154,14 +133,14 @@ static void map_two_pages(void *base, uint8_t fill_byte)
         }
         else
         {
-            // log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
-            //        (unsigned long)(uintptr_t)base,
-            //        (unsigned long)(uintptr_t)r);
+            log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+                   (unsigned long)(uintptr_t)base,
+                   (unsigned long)(uintptr_t)r);
 
             // add region to g_regions array
             if (g_regions_len < MAX_MAPPED_PAGES)
             {
-                g_regions[g_regions_len].addr = base;
+                g_regions[g_regions_len].addr = r;
                 g_regions[g_regions_len].len = 2 * page_size;
                 g_regions_len++;
             }
@@ -185,7 +164,7 @@ void unmap_all_regions(void)
 {
     for (size_t i = 0; i < g_regions_len; i++)
     {
-        // log_append("munmapping: %p\n", g_regions[i].addr);
+        log_append("munmapping: %p\n", g_regions[i].addr);
         if ((uintptr_t)g_regions[i].addr % page_size != 0) {
             fprintf(stderr, "munmap addr not page-aligned: %p\n", g_regions[i].addr);
         }
@@ -233,11 +212,39 @@ static void run_until_quiet(int8_t fill_byte)
         }
         else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4)
         {
-            // log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
+            log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
             break;
         }
     }
-    // log_append("run_until_quiet finished\n");
+    log_append("run_until_quiet finished\n");
+}
+
+#define SANDBOX_STACK_SIZE  (64 * 1024)  // e.g. 64KB
+#define STACK_GUARD_PAGES   1
+
+void *alloc_sandbox_stack(size_t stack_size) {
+    size_t ps = 4096; // call sysconf(_SC_PAGESIZE) during init
+    size_t total = stack_size + STACK_GUARD_PAGES * ps;
+    void *base = mmap(NULL, total, PROT_READ | PROT_WRITE,
+                      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (base == MAP_FAILED) {
+        perror("mmap sandbox stack");
+        exit(1);
+    }
+    // Protect the bottom page as guard
+    if (mprotect(base, STACK_GUARD_PAGES * ps, PROT_NONE) != 0) {
+        perror("mprotect guard");
+        exit(1);
+    }
+    // Return pointer to stack top (grow-down stack)
+    return (uint8_t *)base + total;
+}
+
+void free_sandbox_stack(void *stack_top, size_t stack_size) {
+    size_t ps = page_size;
+    void *base = (uint8_t *)stack_top - (stack_size + STACK_GUARD_PAGES * ps);
+    size_t total = stack_size + STACK_GUARD_PAGES * ps;
+    munmap(base, total);
 }
 
 int run_client(uint32_t *instructions, size_t n_instructions)
@@ -248,9 +255,13 @@ int run_client(uint32_t *instructions, size_t n_instructions)
     // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     for (size_t i = 0; i < n_instructions; i++)
     {
-        uint8_t sandbox_stack[SANDBOX_STACK_SIZE];
-        void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
+        void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
         xreg_init_data[2] = (uint64_t)sandbox_sp;
+
+        // uint8_t sandbox_stack[SANDBOX_STACK_SIZE];
+        // void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
+        // xreg_init_data[2] = (uint64_t)sandbox_sp;
+
         printf("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
         fflush(stdout);
         log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
@@ -278,26 +289,27 @@ int run_client(uint32_t *instructions, size_t n_instructions)
 
         // SIGSEGV if code reaches here
         run_until_quiet(0x00);
-        report_diffs(0x00);
+        // report_diffs(0x00);
 
-        // log_append("Mapped regions:\n");
-        // for (size_t i = 0; i < g_regions_len; i++)
-        // {
-        //     log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-        // }
+        log_append("Mapped regions:\n");
+        for (size_t i = 0; i < g_regions_len; i++)
+        {
+            log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+        }
 
         prepare_sandbox(sandbox_ptr);
-        // instrs[0] = fuzz_buffer[i];
         instrs[0] = instructions[i];
 
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
         fill_all_pages(0xFF);
         run_until_quiet(0xFF);
-        report_diffs(0xFF);
+        // report_diffs(0xFF);
 
-        print_xreg_changes();
-        print_freg_changes();
+        // print_xreg_changes();
+        // print_freg_changes();
+
+        free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
     }
 
 

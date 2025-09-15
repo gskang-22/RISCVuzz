@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <ucontext.h>
+#include <stdatomic.h>
 
 #include "client.h"
 #include "../main.h"
@@ -36,10 +37,10 @@ uint64_t regs_after[32];
 uint64_t fcsr_output_data; // todo: consdier sending this to server for comparison too
 char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
-extern volatile uintptr_t g_fault_addr;
+extern volatile atomic_uintptr_t g_fault_addr;
 extern volatile sig_atomic_t g_faults_this_run;
 
-size_t page_size = 4096;
+size_t page_size = 4096; // sysconf(_SC_PAGESIZE)
 size_t sandbox_pages = 1; // 4 KB sandbox
 size_t guard_pages = 16;  // 64 KB guards (tunable)
 size_t start_offset = 0x20;
@@ -180,20 +181,20 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     switch (signo)
     {
     case SIGILL:
-        log_append("Caught SIGILL (Illegal Instruction)\n");
+        // log_append("Caught SIGILL (Illegal Instruction)\n");
         // log_append("Faulting address: %p\n", fault_addr);
         break;
     case SIGBUS:
-        log_append("Caught SIGBUS (Bus Error)\n");
+        // log_append("Caught SIGBUS (Bus Error)\n");
         break;
     case SIGFPE:
-        log_append("Caught SIGFPE (Floating Point Exception)\n");
+        // log_append("Caught SIGFPE (Floating Point Exception)\n");
         break;
     case SIGTRAP:
-        log_append("Caught SIGTRAP: EBREAK\n");
+        // log_append("Caught SIGTRAP: EBREAK\n");
         break;
     case SIGSEGV:
-        log_append("Caught SIGSEGV (Segmentation Fault)\n");
+        // log_append("Caught SIGSEGV (Segmentation Fault)\n");
         // log_append("Faulting address: %p\n", fault_addr);
 
         if (pc == (uintptr_t)fault_addr) {
@@ -203,14 +204,15 @@ void signal_handler(int signo, siginfo_t *info, void *context)
         } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
             // SIGSEGV occured in sandbox page or kernel. Abort
-            log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
+            // log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
             siglongjmp(jump_buffer, 4);
         } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
         {
-            log_append("threshold exceeded; proceeding anyway.\n");
+            // log_append("threshold exceeded; proceeding anyway.\n");
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
-        g_fault_addr = (uintptr_t)fault_addr;
+        atomic_store_explicit(&g_fault_addr, (uintptr_t)fault_addr, memory_order_relaxed);
+
         g_faults_this_run++;
         // log_append("g_faults_this_run: %d\n", g_faults_this_run);
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
@@ -275,7 +277,7 @@ void print_xreg_changes(void)
 {
     for (int i = 0; i < 32; i++)
     {
-        if (i == 9)  // skip x9
+        if (i == 9)  // skip x9 as it is used for storing the return jump pointer out of sandbox
             continue;
 
         if (xreg_init_data[i] != xreg_output_data[i])
