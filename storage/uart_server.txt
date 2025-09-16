@@ -3,6 +3,13 @@ import asyncio
 import serial_asyncio
 from generate import generate_instructions
 
+# Map UART ports to board names
+UART_PORTS = {
+    # "/dev/ttyUSB0": "lichee",
+    "/dev/ttyUSB0": "beagle",
+}
+BAUD = 115200
+
 instructions = [
     # instructions to be injected
     # 0x00000013, # nop
@@ -16,8 +23,6 @@ instructions = [
     # 0x0142b183, # ld x3, 20(x5)
     0x00dd31af,
 ]
-
-clients = {}  # name -> writer
 
 # Function to read your cfg file
 def read_cfg(filename):
@@ -100,77 +105,65 @@ async def read_results(reader, name, port):
         print(f"[{port}] disconnected")
         return None  # client disconnected
 
-async def handle_client(reader, writer, instructions, cfg):
+async def handle_uart(port, board_name, instructions, cfg):
     # reader --> used to receive from client
     # writer --> used to send to client
 
-    # Handshake: read client name
-    name_len_data = await reader.readexactly(4)
-    (name_len,) = struct.unpack("!I", name_len_data)
-    name = (await reader.readexactly(name_len)).decode()
+    print(f"[{board_name} on {port}] Opening UART...")
+    reader, writer = await serial_asyncio.open_serial_connection(
+        url=port, baudrate=BAUD
+    )
 
-    clients[name] = writer  # store writer by name
-    print(f"Client connected: {name}")
-
-    # Each client independently runs the whole list
     instr_index = 0
     try:
         while instr_index < len(instructions):
-            # Slice next N instructions
             batch = instructions[instr_index:instr_index + cfg["BATCH_SIZE"]]
             instr_index += len(batch)
-            print(f"instr_index: {instr_index}")
-            # Send batch
-            header = struct.pack("!I", len(batch))
+
+            # # Send batch size as number of instructions
+            # writer.write(struct.pack("!I", len(batch)))
+            # await writer.drain()
+
+            # # Then send instructions
+            # payload = b"".join(struct.pack("!I", inst) for inst in batch)
+            # writer.write(payload)
+            # await writer.drain()
+
+            # Send batch length + instructions
             payload = b"".join(struct.pack("!I", inst) for inst in batch)
-            writer.write(header + payload)
+            writer.write(struct.pack("!I", len(batch)) + payload)
             await writer.drain()
+            print(f"[{port}] Sent batch (index {instr_index})")
 
-            # Wait for results before sending next batch
-            # await read_results(reader, name)
-            response1 = await read_results(reader, name)
-            response2 = await read_results(reader, name)
+            # Wait for 2 replies
+            response1 = await read_results(reader, board_name, port)
+            print("response1 received")
+            response2 = await read_results(reader, board_name, port)
+            print("response2 received")
 
-            # Compare responses
+            if response1 is None or response2 is None:
+                break
+
             if response1 != response2:
-                print(f"[ERROR] Responses differ for client {name} on batch starting at index {instr_index - len(batch)}")
-                print(f"Instruction set 1:")
-                print(response1)
-                print(f"Instruction set 2:")
-                print(response2)
+                print(f"[{board_name}] ERROR: responses differ")
+                #todo: print differences
             else:
-                print(f"{name}: responses are the same")
-                print(response1)
+                print(f"[{board_name}] OK: responses match")
 
-        print(f"All instructions sent to {name}")
+        print(f"[{port}] All instructions sent")
+        writer.write(struct.pack("!I", 0))  # 4-byte length of 0
+        await writer.drain()
 
-    except asyncio.IncompleteReadError:
-        print(f"Client {name} disconnected unexpectedly")
-
-    writer.close()
-    await writer.wait_closed()
-    print(f"Client {name} disconnected")
+    finally:
+        writer.close()
+        await writer.wait_closed()
+        print(f"[{board_name} on {port}] closed")
 
 async def main():
-    # open config file
     cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
 
-    global instructions
-    # instructions = generate_instructions(cfg)
-    # print([f"0x{inst:08x}" for inst in instructions])
+    tasks = [handle_uart(port, name, instructions, cfg) for port, name in UART_PORTS.items()]
+    await asyncio.gather(*tasks)
 
-    # creates a listening socket (TCP server)
-    # handle_client: callback function
-    async def client_handler(reader, writer):
-        await handle_client(reader, writer, instructions, cfg)
-
-    server = await asyncio.start_server(client_handler, "0.0.0.0", 9000)
-    addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
-    print(f"Server listening on {addrs}")
-
-    # runs server forever
-    async with server:
-        await server.serve_forever()
-
-# spawns handle_client() per connection
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

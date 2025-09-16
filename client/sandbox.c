@@ -1,52 +1,3 @@
-#include <stdlib.h>
-#include <fcntl.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <ucontext.h>
-#include <stdatomic.h>
-
-#include "client.h"
-#include "../main.h"
-
-
-
-const char *reg_names[] = {
-    "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
-    "x5 (t0)", "x6 (t1)", "x7 (t2)", "x8 (s0/fp)", "x9 (s1)",
-    "x10 (a0)", "x11 (a1)", "x12 (a2)", "x13 (a3)", "x14 (a4)",
-    "x15 (a5)", "x16 (a6)", "x17 (a7)", "x18 (s2)", "x19 (s3)",
-    "x20 (s4)", "x21 (s5)", "x22 (s6)", "x23 (s7)", "x24 (s8)",
-    "x25 (s9)", "x26 (s10)", "x27 (s11)", "x28 (t3)", "x29 (t4)",
-    "x30 (t5)", "x31 (t6)"
-};
-extern uint64_t xreg_init_data[];
-extern uint64_t xreg_output_data[];
-extern uint64_t freg_init_data[];
-extern uint64_t freg_output_data[];
-extern void signal_trampoline(); // from assembly
-extern uint8_t *sandbox_ptr;
-
-sigjmp_buf jump_buffer;
-ucontext_t saved_context;
-uint64_t regs_before[32];
-uint64_t regs_after[32];
-
-uint64_t fcsr_output_data; // todo: consdier sending this to server for comparison too
-char alt_stack[SIGSTKSZ]; // Signal alternate stack
-
-extern volatile atomic_uintptr_t g_fault_addr;
-extern volatile sig_atomic_t g_faults_this_run;
-
-size_t page_size = 4096; // sysconf(_SC_PAGESIZE)
-size_t sandbox_pages = 1; // 4 KB sandbox
-size_t guard_pages = 16;  // 64 KB guards (tunable)
-size_t start_offset = 0x20;
-#define MAX_FAULTS_PER_RUN 10
-#define USER_VA_MAX (1ULL << 47) // 0x8000_000000000
-
 /*
 Code for client (RISC-V board)
 Aim:
@@ -61,6 +12,57 @@ Things to consider:
     5. run twice Detecting Naturally Non-Deterministic Instructions
 
 */
+
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <signal.h>
+#include <setjmp.h>
+#include <ucontext.h>
+#include <stdatomic.h>
+
+#include "client.h"
+#include "../main.h"
+
+// extern variables
+extern uint64_t xreg_init_data[];
+extern uint64_t xreg_output_data[];
+extern uint64_t freg_init_data[];
+extern uint64_t freg_output_data[];
+
+extern void signal_trampoline(); // from assembly
+extern uint8_t *sandbox_ptr;
+
+extern volatile atomic_uintptr_t g_fault_addr;
+extern volatile sig_atomic_t g_faults_this_run;
+
+// private definitions
+#define MAX_FAULTS_PER_RUN 10
+#define USER_VA_MAX (1ULL << 47) // 0x8000_000000000
+
+// private variables
+const char *reg_names[] = {
+    "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
+    "x5 (t0)", "x6 (t1)", "x7 (t2)", "x8 (s0/fp)", "x9 (s1)",
+    "x10 (a0)", "x11 (a1)", "x12 (a2)", "x13 (a3)", "x14 (a4)",
+    "x15 (a5)", "x16 (a6)", "x17 (a7)", "x18 (s2)", "x19 (s3)",
+    "x20 (s4)", "x21 (s5)", "x22 (s6)", "x23 (s7)", "x24 (s8)",
+    "x25 (s9)", "x26 (s10)", "x27 (s11)", "x28 (t3)", "x29 (t4)",
+    "x30 (t5)", "x31 (t6)"
+};
+
+sigjmp_buf jump_buffer;
+ucontext_t saved_context;
+
+uint64_t fcsr_output_data; // todo: consdier sending this to server for comparison too
+char alt_stack[SIGSTKSZ]; // Signal alternate stack
+
+size_t page_size = 4096; // sysconf(_SC_PAGESIZE)
+size_t sandbox_pages = 1; // 4 KB sandbox
+size_t guard_pages = 16;  // 64 KB guards (tunable)
+size_t start_offset = 0x20;
 
 // allocates a memory buffer to write to and execute
 // required for dynamic code injection

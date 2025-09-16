@@ -12,26 +12,27 @@ futher expansion.
 #include <stdatomic.h>
 #include <errno.h>
 
+// extern functions
 extern void run_sandbox();
 extern void test_start();
 extern void print_xreg_changes();
 extern void print_freg_changes();
 
+// extern variables
 extern sigjmp_buf jump_buffer;
-extern uint64_t regs_before[32];
-extern uint64_t regs_after[32];
 
-extern uint32_t fuzz_buffer2[];
-extern size_t fuzz_buffer_len;
 extern uint64_t xreg_init_data[];
 extern uint64_t xreg_output_data[];
 
-// #define SANDBOX_STACK_SIZE 1024
-//  #define SANDBOX_STACK_SIZE 1024
-uint8_t *sandbox_ptr;
-
 extern size_t sandbox_pages;
 extern size_t page_size;
+
+// private definitions
+#define SANDBOX_STACK_SIZE (64 * 1024) // e.g. 64KB
+#define STACK_GUARD_PAGES 1
+
+// private variables
+uint8_t *sandbox_ptr;
 
 volatile sig_atomic_t g_faults_this_run = 0;
 volatile atomic_uintptr_t g_fault_addr = 0;
@@ -60,7 +61,6 @@ static void diffs_push(void *addr, uint8_t oldv, uint8_t newv)
             perror("realloc");
             exit(1);
         }
-
         g_diffs = tmp;
         g_diffs_cap = ncap;
     }
@@ -114,6 +114,7 @@ static void report_diffs(uint8_t expected)
         if ((uintptr_t)p % page_size != 0 || n % page_size != 0)
         {
             printf("WARNING: misaligned region %zu: addr=%p len=%zu\n", i, p, n);
+            fflush(stdout);
             if (((uintptr_t)base % page_size) != 0 || (len % page_size) != 0)
             {
                 printf("Skipping misaligned region %zu: addr=%p len=%zu\n", i, base, len);
@@ -289,10 +290,12 @@ void unmap_all_regions(void)
         if ((uintptr_t)g_regions[i].addr % page_size != 0)
         {
             fprintf(stderr, "munmap addr not page-aligned: %p\n", g_regions[i].addr);
+            fflush(stdout);
         }
         if (g_regions[i].len % page_size != 0)
         {
             fprintf(stderr, "munmap len not page-size aligned: %zu\n", g_regions[i].len);
+            fflush(stdout);
         }
 
         if (munmap(g_regions[i].addr, g_regions[i].len) != 0)
@@ -316,7 +319,8 @@ static void run_until_quiet(int8_t fill_byte)
 
         if (++retries > MAX_RETRIES)
         {
-            printf("Max retries exceeded, aborting run_until_quiet\n");
+            // printf("Max retries exceeded, aborting run_until_quiet\n");
+            // fflush(stdout);
             break;
         }
 
@@ -342,9 +346,6 @@ static void run_until_quiet(int8_t fill_byte)
     }
     log_append("run_until_quiet finished\n");
 }
-
-#define SANDBOX_STACK_SIZE (64 * 1024) // e.g. 64KB
-#define STACK_GUARD_PAGES 1
 
 void *alloc_sandbox_stack(size_t stack_size)
 {
@@ -390,8 +391,6 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         // void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
         // xreg_init_data[2] = (uint64_t)sandbox_sp;
 
-        printf("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
-        fflush(stdout);
         log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
 
         // prepare sandbox
@@ -417,13 +416,13 @@ int run_client(uint32_t *instructions, size_t n_instructions)
 
         // SIGSEGV if code reaches here
         run_until_quiet(0x00);
-        // report_diffs(0x00);
+        report_diffs(0x00);
 
-        log_append("Mapped regions:\n");
-        for (size_t i = 0; i < g_regions_len; i++)
-        {
-            log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
-        }
+        // log_append("Mapped regions:\n");
+        // for (size_t i = 0; i < g_regions_len; i++)
+        // {
+        //     log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr, g_regions[i].len);
+        // }
 
         prepare_sandbox(sandbox_ptr);
         instrs[0] = instructions[i];
@@ -432,11 +431,11 @@ int run_client(uint32_t *instructions, size_t n_instructions)
 
         fill_all_pages(0xFF);
         run_until_quiet(0xFF);
-        // report_diffs(0xFF);
+        report_diffs(0xFF);
 
-        printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
-               g_regions_len, g_diffs_cap, g_diffs_len);
-        fflush(stdout);
+        // printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
+        //        g_regions_len, g_diffs_cap, g_diffs_len);
+        // fflush(stdout);
         if (xreg_init_data == NULL || xreg_output_data == NULL)
         {
             log_append("WARNING: xreg pointers NULL; skipping print_xreg_changes\n");

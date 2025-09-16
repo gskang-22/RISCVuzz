@@ -8,8 +8,6 @@
 	.global freg_output_data
 	.global test_memory
 
-	.extern regs_before
-	.extern regs_after
 	.extern sandbox_ptr
 
 run_sandbox:
@@ -249,9 +247,9 @@ reg_x22_init:
 reg_x23_init:
 	.dword  0xffffffffffffff89
 reg_x24_init:
-	.dword  0x00000000002f0505
+	.dword  0x00000000002f0508
 reg_x25_init:
-	.dword  0xffffffff80000009
+	.dword  0xffffffff80000008
 reg_x26_init:
 	.dword  0x0000000000000000
 reg_x27_init:

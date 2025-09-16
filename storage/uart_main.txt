@@ -18,9 +18,53 @@ extern size_t g_regions_len;
 #define TESTING
 #define DEBUG_MODE
 
-int sock;
+// int sock;
+int serial_fd;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0; // current length of string in buffer
+
+int open_serial(const char *device, int baud)
+{
+    int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0)
+    {
+        perror("open");
+        return -1;
+    }
+
+    struct termios tty;
+    if (tcgetattr(fd, &tty) != 0)
+    {
+        perror("tcgetattr");
+        close(fd);
+        return -1;
+    }
+
+    cfsetospeed(&tty, B115200);
+    cfsetispeed(&tty, B115200);
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit chars
+    tty.c_iflag &= ~IGNBRK;                     // disable break processing
+    tty.c_lflag = 0;                            // no signaling chars, no echo, no canonical
+    tty.c_oflag = 0;                            // no remapping, no delays
+    tty.c_cc[VMIN] = 1;                         // read doesn't block
+    tty.c_cc[VTIME] = 5;                        // 0.5s timeout
+
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+    tty.c_cflag |= (CLOCAL | CREAD);   // ignore modem controls, enable reading
+    tty.c_cflag &= ~(PARENB | PARODD); // shut off parity
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0)
+    {
+        perror("tcsetattr");
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
 
 // read exactly n bytes, retry until all bytes received
 ssize_t read_n(int fd, void *buf, size_t n)
@@ -123,55 +167,31 @@ int main()
     fflush(stdout);
     run_client(instructions, sizeof(instructions) / sizeof(instructions[0]));
 #else
-    // creates a new socket (IPv4, TCP)
-    // sock: file descriptor used to send/receive
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) { perror("socket"); exit(1); }
-
-    struct sockaddr_in server_addr = {0};
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(SERVER_PORT);
-    inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
-    
-    // attempt to establish TCP connection
-    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect"); close(sock); exit(1);
-    }
+    serial_fd = open_serial("/dev/ttyS0", 115200);
+    if (serial_fd < 0)
+        exit(1);
 
     // connection successful
     printf("Connected to server\n");
-
-    // write() on client --> reader on server
-    // writer.write() on server --> read() on client
-
-    // send client name for identification
-    const char *name = "beagle";
-    uint32_t len = htonl(strlen(name));
-    write_n(sock, &len, sizeof(len));   // send length
-    write_n(sock, name, strlen(name));  // send name
+    fflush(stdout);
 
     // loop: receive instructions, send back results
     while (1)
     {
         uint32_t batch_size_net;
-        // closes client if server closed connection
-        if (read_n(sock, &batch_size_net, sizeof(batch_size_net)) != sizeof(batch_size_net)) {
-            printf("Server closed connection\n");
-            break;
-        }
+        read_n(serial_fd, &batch_size_net, sizeof(batch_size_net));
+
+        uint32_t batch_size = ntohl(batch_size_net);
+        printf("Batch size: %u\n", batch_size);
+        fflush(stdout);
 
         // alternative way to close client: send batch size of 0
-        uint32_t batch_size = ntohl(batch_size_net);
-        if (batch_size == 0) {
+        if (batch_size == 0)
+        {
             printf("No more instructions\n");
+            fflush(stdout);
             break;
         }
-        
-        // if (batch_size > (UINT32_MAX / sizeof(uint32_t)) || 
-        //     batch_size > SOME_REASONABLE_LIMIT) {  // e.g., 1<<20
-        //     fprintf(stderr, "batch_size too large: %u\n", batch_size);
-        //     break;
-        // }
 
         uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
         if (!instructions)
@@ -180,13 +200,12 @@ int main()
             break;
         }
 
-        if (read_n(sock, instructions, batch_size * sizeof(uint32_t)) != 
-            (ssize_t)(batch_size * sizeof(uint32_t))) {
-            fprintf(stderr, "short read or disconnect while reading instructions\n");
+        if (read_n(serial_fd, instructions, batch_size * sizeof(uint32_t)) != (ssize_t)(batch_size * sizeof(uint32_t)))
+        {
+            fprintf(stderr, "short read\n");
             free(instructions);
             break;
         }
-        printf("Got %u instructions\n", batch_size);
 
         // convert each network-order word instruction with ntohl
         for (uint32_t i = 0; i < batch_size; i++)
@@ -194,6 +213,8 @@ int main()
             instructions[i] = ntohl(instructions[i]);
             // printf("Instruction[%u] = 0x%08x\n", i, instructions[i]); // prints instructions received
         }
+        printf("Got %u instructions\n", batch_size);
+        fflush(stdout);
 
         // run sandbox 1
         printf("Running sandbox 1...\n");
@@ -201,20 +222,19 @@ int main()
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);
         send_log(); // send results back
-
         // run sandbox 2
         printf("Running sandbox 2..\n");
         fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);
         send_log(); // send results back
-
         free(instructions);
+
         memset(g_regions, 0, MAX_MAPPED_PAGES * sizeof(*g_regions));
         memset(g_diffs, 0, MAX_DIFFS * sizeof(*g_diffs));
     }
 
-    close(sock);
+    close(serial_fd);
 #endif
     free_executable_buffer(sandbox_ptr); // unmap sandbox region
     unmap_all_regions();                 // unmap g_regions
