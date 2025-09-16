@@ -9,6 +9,7 @@ extern uint8_t *sandbox_ptr;
 extern mapped_region_t *g_regions;
 extern memdiff_t *g_diffs;
 extern void unmap_all_regions();
+extern size_t g_regions_len;
 
 #define SERVER_IP "192.168.10.1"
 #define SERVER_PORT 9000
@@ -162,7 +163,7 @@ int main()
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     if (!g_regions) { perror("calloc g_regions"); exit(1); }
     g_regions_len = 0;
-    
+
     sandbox_ptr = allocate_executable_buffer();
 #ifdef TESTING
     uint32_t instructions[] = {

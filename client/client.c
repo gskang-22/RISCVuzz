@@ -36,7 +36,7 @@ extern size_t page_size;
 volatile sig_atomic_t g_faults_this_run = 0;
 volatile atomic_uintptr_t g_fault_addr = 0;
 mapped_region_t *g_regions = NULL;
-static size_t g_regions_len = 0; // global counter variable (number of valid entries currently stored in the g_regions array)
+size_t g_regions_len = 0; // global counter variable (number of valid entries currently stored in the g_regions array)
 
 memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0;
@@ -65,6 +65,24 @@ static void diffs_push(void *addr, uint8_t oldv, uint8_t newv)
         g_diffs_cap = ncap;
     }
     g_diffs[g_diffs_len++] = (memdiff_t){addr, oldv, newv};
+}
+
+static bool probe_read_byte(uint8_t *addr, uint8_t *out)
+{
+    int rc = sigsetjmp(jump_buffer, 1);
+    if (rc == 0)
+    {
+        /* Attempt read: volatile to force the actual memory read */
+        volatile uint8_t v = *addr;
+        *out = (uint8_t)v;
+        /* normal path */
+        return true;
+    }
+    else
+    {
+        /* siglongjmp landed here — read faulted or handler asked to skip */
+        return false;
+    }
 }
 
 static void report_diffs(uint8_t expected)
