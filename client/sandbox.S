@@ -201,7 +201,7 @@ hidden_data:
 	.align  8
 xreg_init_data:
 reg_x0_init:
-	.dword  0xd8b2fb3fc35cd94a
+	.dword  0x0000000000000000
 reg_x1_init:
 	.dword  0xf045bfd112f01034
 reg_x2_init:
@@ -249,7 +249,7 @@ reg_x22_init:
 reg_x23_init:
 	.dword  0xffffffffffffff89
 reg_x24_init:
-	.dword  0xffffffffffffffef
+	.dword  0x00000000002f0505
 reg_x25_init:
 	.dword  0xffffffff80000009
 reg_x26_init:

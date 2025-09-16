@@ -168,7 +168,9 @@ int main()
 #ifdef TESTING
     uint32_t instructions[] = {
         // instructions to be injected
-        0x00dd31af, // amoadd.d    gp,a3,(s10)
+        0x00dd31af, // amoadd.d gp,a3,(s10)
+        0x00dcb1af, // amoadd.d gp,a3,(s9)
+        0x00dc31af, // amoadd.d gp,a3,(s8)        
     };
 
     printf("Running sandbox 1...\n");
