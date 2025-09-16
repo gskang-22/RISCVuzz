@@ -401,8 +401,8 @@ int run_client(uint32_t *instructions, size_t n_instructions)
             print_xreg_changes();
         }
 
-        // print_xreg_changes();
-        // print_freg_changes();
+        print_xreg_changes();
+        print_freg_changes();
 
         free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
     }
