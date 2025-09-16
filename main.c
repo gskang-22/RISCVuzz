@@ -15,7 +15,7 @@ extern size_t g_regions_len;
 #define SERVER_PORT 9000
 #define LOG_BUF_SIZE 4096
 
-#define TESTING
+//#define TESTING
 #define DEBUG_MODE
 
 int sock;
@@ -86,10 +86,10 @@ int send_log()
 
     // Send length prefix (network byte order)
     uint32_t len_net = htonl((uint32_t)log_len);
-    if (write_n(serial_fd, &len_net, sizeof(len_net)) != sizeof(len_net))
+    if (write_n(sock, &len_net, sizeof(len_net)) != sizeof(len_net))
         return -1;
     // Send the buffer itself
-    if (write_n(serial_fd, log_buffer, log_len) != (ssize_t)log_len)
+    if (write_n(sock, log_buffer, log_len) != (ssize_t)log_len)
         return -1;
 
     // Clear the buffer memory
@@ -211,7 +211,6 @@ int main()
 
         free(instructions);
         memset(g_regions, 0, MAX_MAPPED_PAGES * sizeof(*g_regions));
-        memset(g_diffs, 0, MAX_DIFFS * sizeof(*g_diffs));
     }
 
     close(sock);
