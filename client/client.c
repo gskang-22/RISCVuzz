@@ -220,6 +220,17 @@ static void map_two_pages(void *base, uint8_t fill_byte)
 {
     if (g_regions_len >= MAX_MAPPED_PAGES)
         return;
+    
+    if (base == NULL) {
+        log_append("map_two_pages: refusing to map at NULL base\n");
+        siglongjmp(jump_buffer, 4);
+    }
+
+        /* avoid mapping very low addresses (NULL page) */
+    if ((uintptr_t)base < (uintptr_t)page_size) {
+        log_append("map_two_pages: refusing to map at low address %p\n", base);
+        siglongjmp(jump_buffer, 4);
+    }
 
     /* if region exists at exactly this base, skip */
     if (region_exists(base))
