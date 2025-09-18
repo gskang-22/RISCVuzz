@@ -1,18 +1,17 @@
-    .section .text
-    .globl signal_trampoline
-    .extern temp_storage
+.section .trampoline, "ax"
+.global signal_trampoline
+.global _trampoline_start
+.global _trampoline_end
 
+_trampoline_start:
 signal_trampoline:
-    # a0 = signo
-    # a1 = siginfo*
-    # a2 = ucontext*
-
-    # Restore gp and tp first so libc can work
+    # Restore gp/tp
     la      t6, temp_storage
-    ld      gp, 16(t6)       # saved_gp
-    ld      tp, 24(t6)       # saved_tp
+    ld      gp, 16(t6)
+    ld      tp, 24(t6)
 
-    # Now call the C handler: void signal_handler(int, siginfo*, void*)
+    # Call C signal handler
     la      t0, signal_handler
     jr      t0
+_trampoline_end:
 

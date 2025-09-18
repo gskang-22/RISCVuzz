@@ -13,173 +13,37 @@
 run_sandbox:
 
 # saves important registers to restore at the end
-	la      s1, temp_storage
-	sd      ra, 0(s1)
-	sd      sp, 8(s1)
-	sd      gp, 16(s1)
-	sd      tp, 24(s1)
-	sd      fp, 32 (s1)
+	la      t4, temp_storage
+	sd      ra, 0(t4)
+	sd      sp, 8(t4)
+	sd      gp, 16(t4)
+	sd      tp, 24(t4)
+	sd      fp, 32 (t4)
+
+
+	la      t4, xreg_init_data
+	ld      a4, 112(t4)
+
+
 
 ##############################################################
 
-# preset registers to set up environment
-freg_init:
-freg_s_init:
-	la      s1, freg_init_data
+#	la      s1, sandbox_ptr
+#	ld      s1, 0(s1)
 
-	flw     f2, 16(s1)
-	flw     f3, 24(s1)
-	flw     f4, 32(s1)
-	flw     f5, 40(s1)
-	flw     f6, 48(s1)
-	flw     f7, 56(s1)
-	flw     f8, 64(s1)
-	flw     f10, 80(s1)
-	flw     f13, 104(s1)
-	flw     f14, 112(s1)
-	flw     f15, 120(s1)
-	flw     f16, 128(s1)
-	flw     f17, 136(s1)
-	flw     f20, 160(s1)
-	flw     f22, 176(s1)
-	flw     f25, 200(s1)
-	flw     f29, 232(s1)
-	flw     f30, 240(s1)
-
-freg_d_init:
-	fld     f0, 0(s1)
-	fld     f1, 8(s1)
-	fld     f9, 72(s1)
-	fld     f11, 88(s1)
-	fld     f12, 96(s1)
-	fld     f18, 144(s1)
-	fld     f19, 152(s1)
-	fld     f21, 168(s1)
-	fld     f23, 184(s1)
-	fld     f24, 192(s1)
-	fld     f26, 208(s1)
-	fld     f27, 216(s1)
-	fld     f28, 224(s1)
-	fld     f31, 248(s1)
-
-xreg_init:
-	la      s1, xreg_init_data
-
-	ld      x0, 0(s1)
-	ld      ra, 8(s1)
-	ld      sp, 16(s1)
-	ld	gp, 24(s1)
-	ld	tp, 32(s1)
-	ld      t0, 40(s1)
-	ld      t1, 48(s1)
-	ld      t2, 56(s1)
-	ld      s0, 64(s1)
-#	ld      s1, 72(s1)
-	ld      a0, 80(s1) // x8 - s0/fp
-	ld      a1, 88(s1)
-	ld      a2, 96(s1)
-	ld      a3, 104(s1)
-	ld      a4, 112(s1)
-	ld      a5, 120(s1)
-	ld      a6, 128(s1)
-	ld      a7, 136(s1)
-	ld      s2, 144(s1)
-	ld      s3, 152(s1)
-	ld      s4, 160(s1)
-	ld      s5, 168(s1)
-	ld      s6, 176(s1)
-	ld      s7, 184(s1)
-	ld      s8, 192(s1)
-	ld      s9, 200(s1)
-	ld      s10, 208(s1)
-	ld      s11, 216(s1)
-	ld      t3, 224(s1)
-	ld      t4, 232(s1)
-	ld      t5, 240(s1)
-	ld      t6, 248(s1)
-
-########################################################
-
-	la      s1, sandbox_ptr
-	ld      s1, 0(s1)
+#la t4, sandbox_ptr
+#ld t4, 0(t4)
 
 # Jump absolutely to sandbox start (jalr zero, 0(s0))
-	jalr    s1, 32(s1)                             # offset 4 to skip the first ebreak
+#	jalr    s1, 32(s1)                             # offset 4 to skip the first ebreak
+#jalr t4, 32(t4)
 
+sw t2, 0(a4)
+ret
 ########################################################
 
 return_label:
 # After sandbox returns...
-reg_dump:
-	la      s1, xreg_output_data
-	sd      x0, 0(s1)
-	sd      x2, 16(s1)
-	sd      x3, 24(s1)
-	sd      x4, 32(s1)
-	sd      x5, 40(s1)
-	sd      x6, 48(s1)
-	sd      x7, 56(s1)
-	sd      x8, 64(s1)
-	sd      x9, 72(s1)
-	sd      x10, 80(s1)
-	sd      x11, 88(s1)
-	sd      x12, 96(s1)
-	sd      x13, 104(s1)
-	sd      x14, 112(s1)
-	sd      x15, 120(s1)
-	sd      x16, 128(s1)
-	sd      x17, 136(s1)
-	sd      x18, 144(s1)
-	sd      x19, 152(s1)
-	sd      x20, 160(s1)
-	sd      x21, 168(s1)
-	sd      x22, 176(s1)
-	sd      x23, 184(s1)
-	sd      x24, 192(s1)
-	sd      x25, 200(s1)
-	sd      x26, 208(s1)
-	sd      x27, 216(s1)
-	sd      x28, 224(s1)
-	sd      x29, 232(s1)
-	sd      x30, 240(s1)
-	sd      x31, 248(s1)
-
-freg_save:
-	la      s1, freg_output_data
-	fsw     f2, 16(s1)
-	fsw     f3, 24(s1)
-	fsw     f4, 32(s1)
-	fsw     f5, 40(s1)
-	fsw     f6, 48(s1)
-	fsw     f7, 56(s1)
-	fsw     f8, 64(s1)
-	fsw     f10, 80(s1)
-	fsw     f13, 104(s1)
-	fsw     f14, 112(s1)
-	fsw     f15, 120(s1)
-	fsw     f16, 128(s1)
-	fsw     f17, 136(s1)
-	fsw     f20, 160(s1)
-	fsw     f22, 176(s1)
-	fsw     f25, 200(s1)
-	fsw     f29, 232(s1)
-	fsw     f30, 240(s1)
-
-	la      s1, freg_output_data
-	fsd     f0, 0(s1)
-	fsd     f1, 8(s1)
-	fsd     f9, 72(s1)
-	fsd     f11, 88(s1)
-	fsd     f12, 96(s1)
-	fsd     f18, 144(s1)
-	fsd     f19, 152(s1)
-	fsd     f21, 168(s1)
-	fsd     f23, 184(s1)
-	fsd     f24, 192(s1)
-	fsd     f26, 208(s1)
-	fsd     f27, 216(s1)
-	fsd     f28, 224(s1)
-	fsd     f31, 248(s1)
 
 #################################################################
 
@@ -190,8 +54,8 @@ freg_save:
 	ld      gp, 16(s1)
 	ld      tp, 24(s1)
 	ld      fp, 32 (s1)
-
-	ret
+	
+    ret
 #################################################################
 	.data
 
@@ -227,7 +91,8 @@ reg_x12_init:
 reg_x13_init:
 	.dword  0xc6e26af78413e5e3
 reg_x14_init:
-	.dword  0x67ffe336dab40344
+	.dword  0x67ffe336dab40348
+#0x67ffe336dab40344
 reg_x15_init:
 	.dword  0xffffffff80000000
 reg_x16_init:

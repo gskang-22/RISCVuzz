@@ -11,6 +11,7 @@ futher expansion.
 #include <stdatomic.h>
 #include <stdatomic.h>
 #include <errno.h>
+#include <signal.h>
 
 // extern functions
 extern void run_sandbox();
@@ -43,12 +44,24 @@ memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0;
 static size_t g_diffs_cap = 0;
 
-// Example: vse128.v v0, 0(t0) encoded as 0x10028027
+volatile uintptr_t last_pc_before = 0;
+volatile uintptr_t last_pc_after = 0;// Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00000013, // nop to be replaced
-
-    0x00048067 // jalr x0, 0(x9)
+//0x00100073,
+0x00008067,
+//    0x00048067 // jalr x0, 0(x9)
 };
+
+static void watchdog_handler(int signo) {
+    fprintf(stderr, "[WATCHDOG] Sandbox hung, killing process...\n");
+    _exit(1);
+}
+
+static void start_watchdog(int seconds) {
+    signal(SIGALRM, watchdog_handler);
+    alarm(seconds);
+}
 
 static void diffs_push(void *addr, uint8_t oldv, uint8_t newv)
 {
@@ -237,7 +250,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
     if (region_exists(base))
         return;
 
-    void *r = mmap(base, 2 * page_size,
+    void *r = mmap(base, page_size,
                    PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, // MAP_FIXED
                    -1, 0);
@@ -256,7 +269,7 @@ static void map_two_pages(void *base, uint8_t fill_byte)
                (unsigned long)(uintptr_t)r);
 
     /* Store the actual returned address (r), not the requested base */
-    if (g_regions_len < MAX_MAPPED_PAGES)
+    /*if (g_regions_len < MAX_MAPPED_PAGES)
     {
         g_regions[g_regions_len].addr = r;
         g_regions[g_regions_len].len = 2 * page_size;
@@ -265,11 +278,11 @@ static void map_two_pages(void *base, uint8_t fill_byte)
     else
     {
         log_append("WARNING: region capacity exhausted\n");
-        /* still write to the mapping to initialize it */
+        // still write to the mapping to initialize it 
     }
-
+*/
     // fill region with fill_byte
-    memset(r, fill_byte, 2 * page_size);
+    memset(r, fill_byte,  page_size);
 }
 
 // fills all pages in g_region with fill_byte
@@ -314,36 +327,31 @@ static void run_until_quiet(int8_t fill_byte)
     int retries = 0;
     const int MAX_RETRIES = 20; // set limit
 
-    while (1)
+    log_append("DEBUG5");
+    void *base = page_align_down((void *)0x00000036dab40000);
+    map_two_pages(base, fill_byte);
+
+    int jump_rc = sigsetjmp(jump_buffer, 1);
+    log_append("DEBUG1");
+    if (jump_rc == 0)
     {
-
-        if (++retries > MAX_RETRIES)
-        {
-            // printf("Max retries exceeded, aborting run_until_quiet\n");
-            // fflush(stdout);
-            break;
-        }
-
-        int jump_rc = sigsetjmp(jump_buffer, 1);
-
-        if (jump_rc == 0)
-        {
-            run_sandbox(sandbox_ptr);
-            break;
-        }
-        else if (jump_rc == 2)
-        {
-            // segv happened; map and retry
-            void *base = page_align_down((void *)g_fault_addr);
-            map_two_pages(base, fill_byte);
-            continue;
-        }
-        else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4)
-        {
-            log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
-            break;
-        }
+        log_append("DEBUG9");
+        run_sandbox(sandbox_ptr);
     }
+    else if (jump_rc == 2)
+    {
+        log_append("DEBUG0");
+        // segv happened; map and retry
+        void *base = page_align_down((void *)0x00000036dab40000);
+        map_two_pages(base, fill_byte);
+    }
+    else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4)
+    {
+        log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
+    } else {
+        log_append("Code should not run here\n");
+    }
+    
     log_append("run_until_quiet finished\n");
 }
 
@@ -375,17 +383,24 @@ void free_sandbox_stack(void *stack_top, size_t stack_size)
     size_t total = stack_size + STACK_GUARD_PAGES * ps;
     munmap(base, total);
 }
-
+extern void signal_trampoline(void);
+extern char _trampoline_start[], _trampoline_end[];
 int run_client(uint32_t *instructions, size_t n_instructions)
 {
     setup_signal_handlers();
     unmap_vdso_vvar();
+    
 
-    // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
+size_t tramp_size = _trampoline_end - _trampoline_start;
+printf("trampoline at %p - %p, size %zu\n",
+       _trampoline_start, _trampoline_end, tramp_size);
+
+mprotect(_trampoline_start, tramp_size, PROT_READ | PROT_EXEC);
+// for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
     for (size_t i = 0; i < n_instructions; i++)
     {
-        void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
-        xreg_init_data[2] = (uint64_t)sandbox_sp;
+//        void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
+//        xreg_init_data[2] = (uint64_t)sandbox_sp;
 
         // uint8_t sandbox_stack[SANDBOX_STACK_SIZE];
         // void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
@@ -398,22 +413,40 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         // instrs[0] = fuzz_buffer[i];
         instrs[0] = instructions[i];
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
+/*unsigned char *p = (unsigned char*)0x36dab40000;
+for (int i=0;i<64;i+=16) {
+    printf("%08lx  ", (unsigned long)(0x36dab40000 + i));
+    for (int j=0;j<16;j++) printf("%02x ", p[i+j]);
+    printf("\n");
+}*/
         // unmap using munmap
         unmap_all_regions(); // unmap g_regions
+    void *base = page_align_down((void *)0x00000036dab40000);
+    map_two_pages(base, 0x00);
 
         int jump_rc = sigsetjmp(jump_buffer, 1);
         if (jump_rc == 0)
         {
+            log_append("running sandbox\n");
+            last_pc_before = (uintptr_t)sandbox_ptr;    
+           // start_watchdog(2); // 2s timeout
             run_sandbox(sandbox_ptr);
+           //     alarm(0); // cancel watchdog
+            log_append("exited sandbox\n");
+    //last_pc_after = (uintptr_t);
             continue; // no faults raised
         }
         else if (jump_rc == 1 || jump_rc == 4)
         {
-            // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
+          // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
+            log_append("jump rc = 1 or 4");
             continue;
         }
+if (last_pc_after == last_pc_before) {
+    fprintf(stderr, "[DEBUG] PC stuck at 0x%lx\n", last_pc_before);
+}
 
+log_append("testtest");
         // SIGSEGV if code reaches here
         run_until_quiet(0x00);
         report_diffs(0x00);
@@ -428,7 +461,6 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         instrs[0] = instructions[i];
 
         inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
         fill_all_pages(0xFF);
         run_until_quiet(0xFF);
         report_diffs(0xFF);
@@ -448,7 +480,7 @@ int run_client(uint32_t *instructions, size_t n_instructions)
         print_xreg_changes();
         print_freg_changes();
 
-        free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
+//        free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
     }
 
     return 0;

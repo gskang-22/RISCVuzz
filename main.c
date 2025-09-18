@@ -1,9 +1,13 @@
+#define _GNU_SOURCE
 #include "main.h"
 #include "client.h"
 #include "sandbox.h"
+
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sched.h>
+#include <stdio.h>
 
 extern uint8_t *sandbox_ptr;
 extern mapped_region_t *g_regions;
@@ -15,12 +19,25 @@ extern size_t g_regions_len;
 #define SERVER_PORT 9000
 #define LOG_BUF_SIZE 4096
 
-//#define TESTING
+#define TESTING
 #define DEBUG_MODE
 
 int sock;
 char log_buffer[LOG_BUF_SIZE];
 size_t log_len = 0; // current length of string in buffer
+
+void pin_to_core(int core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+
+    pid_t pid = getpid(); // or use gettid() for threads
+    if (sched_setaffinity(pid, sizeof(cpuset), &cpuset) != 0) {
+        perror("sched_setaffinity");
+    } else {
+        printf("Process pinned to core %d\n", core_id);
+    }
+}
 
 // read exactly n bytes, retry until all bytes received
 ssize_t read_n(int fd, void *buf, size_t n)
@@ -96,8 +113,8 @@ int send_log()
     memset(log_buffer, 0, LOG_BUF_SIZE); // <-- zero entire buffer
     log_len = 0;                         // reset length
 
-    printf("log sent; resetting log\n");
-    fflush(stdout);
+    //printf("log sent; resetting log\n");
+    //fflush(stdout);
     return 0;
     // example usage
     // send_log(sock);  // send accumulated logs to server
@@ -105,6 +122,7 @@ int send_log()
 
 int main()
 {
+    pin_to_core(0);
     g_regions = calloc(MAX_MAPPED_PAGES, sizeof(*g_regions));
     if (!g_regions) { perror("calloc g_regions"); exit(1); }
     g_regions_len = 0;
@@ -114,9 +132,13 @@ int main()
 #ifdef TESTING
     uint32_t instructions[] = {
         // instructions to be injected
-        0x00dd31af, // amoadd.d gp,a3,(s10)
-        0x00dcb1af, // amoadd.d gp,a3,(s9)
-        0x00dc31af, // amoadd.d gp,a3,(s8)        
+//0x006cd063,
+//0x0077292f, //amoadd.w
+0x00000013,
+0x00072383, // lw t2, 0(a4)
+0x00772023, // sw t2, 0(a4)
+0x0877292f, //amoswap.w        
+0x4077292f, // amoor.w s2,t2,(a4)
     };
 
     printf("Running sandbox 1...\n");
@@ -196,15 +218,15 @@ int main()
         }
 
         // run sandbox 1
-        printf("Running sandbox 1...\n");
-        fflush(stdout);
+        //printf("Running sandbox 1...\n");
+        //fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);
         send_log(); // send results back
 
         // run sandbox 2
-        printf("Running sandbox 2..\n");
-        fflush(stdout);
+        //printf("Running sandbox 2..\n");
+        //fflush(stdout);
         log_append("sandbox ptr: %p\n", sandbox_ptr);
         run_client(instructions, batch_size);
         send_log(); // send results back

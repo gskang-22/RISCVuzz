@@ -37,7 +37,7 @@ extern uint8_t *sandbox_ptr;
 
 extern volatile atomic_uintptr_t g_fault_addr;
 extern volatile sig_atomic_t g_faults_this_run;
-
+extern uintptr_t last_pc_after;
 // private definitions
 #define MAX_FAULTS_PER_RUN 10
 #define USER_VA_MAX (1ULL << 47) // 0x8000_000000000
@@ -82,7 +82,29 @@ uint8_t *allocate_executable_buffer()
     }
 
     uint8_t *sandbox = buf + guard_pages * page_size;
+
+    // Print the address of the sandbox 
+    printf("Sandbox allocated at: %p\n", (void*)sandbox);
+
     return sandbox;
+}
+
+// convert a uintptr_t to hex string (no malloc, no stdio)
+static void hex_uintptr(uintptr_t val, char *buf) {
+    static const char hex[] = "0123456789abcdef";
+    buf[0] = '0';
+    buf[1] = 'x';
+    for (int i = (sizeof(uintptr_t) * 2) - 1; i >= 0; i--) {
+        buf[2 + ((sizeof(uintptr_t) * 2) - 1 - i)] = hex[(val >> (i * 4)) & 0xf];
+    }
+    buf[2 + sizeof(uintptr_t) * 2] = '\0';
+}
+
+// write a C string (must be null-terminated)
+static void safe_write(const char *s) {
+    size_t len = 0;
+    while (s[len]) len++;
+    write(STDERR_FILENO, s, len);
 }
 
 void free_executable_buffer(uint8_t *sandbox) {
@@ -156,6 +178,23 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     ucontext_t *uc = (ucontext_t *)context;
     void *fault_addr = info->si_addr;
     uintptr_t pc = uc->uc_mcontext.__gregs[REG_PC];  
+    
+    sig_atomic_t pc_low = (sig_atomic_t)(pc & 0xffffffff);    
+    static volatile sig_atomic_t last_pc_low = 0;
+    static volatile sig_atomic_t repeated_pc_count = 0;
+last_pc_after = pc;    
+    if (pc_low == last_pc_low) {
+        repeated_pc_count++;
+    } else {
+        last_pc_low = pc_low;
+        repeated_pc_count = 1;
+    }
+    if (repeated_pc_count > 128) {
+        const char msg[] = "Repeated PC detected -> aborting\n";
+        write(STDERR_FILENO, msg, sizeof(msg)-1);
+        siglongjmp(jump_buffer, 6); // 6 == repeated-PC abort
+    }
+
     // === Save general-purpose registers (x0-x31) ===
     for (int i = 0; i < 32; i++)
     {
@@ -183,40 +222,40 @@ void signal_handler(int signo, siginfo_t *info, void *context)
     switch (signo)
     {
     case SIGILL:
-        // log_append("Caught SIGILL (Illegal Instruction)\n");
-        // log_append("Faulting address: %p\n", fault_addr);
+        log_append("Caught SIGILL (Illegal Instruction)\n");
+        log_append("Faulting address: %p\n", fault_addr);
         break;
     case SIGBUS:
-        // log_append("Caught SIGBUS (Bus Error)\n");
+        log_append("Caught SIGBUS (Bus Error)\n");
         break;
     case SIGFPE:
-        // log_append("Caught SIGFPE (Floating Point Exception)\n");
+        log_append("Caught SIGFPE (Floating Point Exception)\n");
         break;
     case SIGTRAP:
-        // log_append("Caught SIGTRAP: EBREAK\n");
+        log_append("Caught SIGTRAP: EBREAK\n");
         break;
     case SIGSEGV:
-        // log_append("Caught SIGSEGV (Segmentation Fault)\n");
-        // log_append("Faulting address: %p\n", fault_addr);
+        log_append("Caught SIGSEGV (Segmentation Fault)\n");
+        log_append("Faulting address: %p\n", fault_addr);
 
         if (pc == (uintptr_t)fault_addr) {
             // PC has escaped from sandbox; abort
-            // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
+            log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
             siglongjmp(jump_buffer, 4);
         } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
         {
             // SIGSEGV occured in sandbox page or kernel. Abort
-            // log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
+            log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
             siglongjmp(jump_buffer, 4);
         } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
         {
-            // log_append("threshold exceeded; proceeding anyway.\n");
+            log_append("threshold exceeded; proceeding anyway.\n");
             siglongjmp(jump_buffer, 3); // threshold exceeded
         }
         atomic_store_explicit(&g_fault_addr, (uintptr_t)fault_addr, memory_order_relaxed);
 
         g_faults_this_run++;
-        // log_append("g_faults_this_run: %d\n", g_faults_this_run);
+        log_append("g_faults_this_run: %d\n", g_faults_this_run);
         siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
     default:
         log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
@@ -236,7 +275,8 @@ void setup_signal_handlers()
 
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
-    sa.sa_sigaction = (void *)signal_trampoline;
+    //sa.sa_sigaction = (void *)signal_trampoline;
+    sa.sa_sigaction = (void *)signal_handler;
     sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
     sigemptyset(&sa.sa_mask);
