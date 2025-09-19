@@ -13,6 +13,12 @@ extern memdiff_t *g_diffs;
 extern void unmap_all_regions();
 extern size_t g_regions_len;
 
+ssize_t read_n(int fd, void *buf, size_t n);
+ssize_t write_n(int fd, const void *buf, size_t n);
+void log_append(const char *fmt, ...);
+int send_log();
+void set_up_tcp();
+
 #define SERVER_IP "192.168.10.1"
 #define SERVER_PORT 9000
 #define LOG_BUF_SIZE 4096
@@ -71,11 +77,11 @@ int main() {
       break;
     }
 
-    if (batch_size > (UINT32_MAX / sizeof(uint32_t)) ||
-        batch_size > SOME_REASONABLE_LIMIT) {  // e.g., 1<<20
-      fprintf(stderr, "batch_size too large: %u\n", batch_size);
-      break;
-    }
+    // if (batch_size > (UINT32_MAX / sizeof(uint32_t)) ||
+    //     batch_size > SOME_REASONABLE_LIMIT) {  // e.g., 1<<20
+    //   fprintf(stderr, "batch_size too large: %u\n", batch_size);
+    //   break;
+    // }
 
     uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
     if (!instructions) {

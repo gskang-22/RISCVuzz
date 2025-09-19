@@ -10,6 +10,7 @@ ease of futher expansion.
 #include <errno.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <sys/time.h>
 
 #include "../main.h"
 #include "sandbox.h"
