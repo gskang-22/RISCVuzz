@@ -23,7 +23,7 @@ void set_up_tcp();
 #define SERVER_PORT 9000
 #define LOG_BUF_SIZE 4096
 
-// #define TESTING
+#define TESTING
 #define DEBUG_MODE
 
 int sock;
@@ -43,9 +43,11 @@ int main() {
 #ifdef TESTING
   uint32_t instructions[] = {
       // instructions to be injected
-      0x00dd31af,  // amoadd.d gp,a3,(s10)
-      0x00dcb1af,  // amoadd.d gp,a3,(s9)
-      0x00dc31af,  // amoadd.d gp,a3,(s8)
+      0x00000013,
+      0x00072383,  // lw t2, 0(a4)
+      0x00772023,  // sw t2, 0(a4)
+      0x0877292f,  // amoswap.w
+      0x4077292f,  // amoor.w s2,t2,(a4)
   };
 
   printf("Running sandbox 1...\n");
