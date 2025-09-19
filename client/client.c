@@ -172,7 +172,7 @@ static void run_until_quiet(int8_t fill_byte) {
         // segv happened; map and retry
         void *base = page_align_down((void *)g_fault_addr);
         map_two_pages(base, fill_byte);
-      } else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4) {
+      } else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4 || jump_rc == 5) {
         log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
         break;
       }
