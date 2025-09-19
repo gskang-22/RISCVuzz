@@ -1,7 +1,8 @@
 import struct
 import asyncio
-import serial_asyncio
 from generate import generate_instructions
+
+TESTING = False
 
 instructions = [
     # instructions to be injected
@@ -14,7 +15,9 @@ instructions = [
     # 0x00058067, # jump to x11
     # 0x0000a103, # lw x2, 0(x1)
     # 0x0142b183, # ld x3, 20(x5)
-    0x00dd31af,
+    0x00dd31af, # amoadd.d gp,a3,(s10)
+    0x00dcb1af, # amoadd.d gp,a3,(s9)
+    0x00dc31af, # amoadd.d gp,a3,(s8) 
 ]
 
 clients = {}  # name -> writer
@@ -78,7 +81,7 @@ def handle_lichee_results(message):
     return
 
 # reads data from client and handles it 
-async def read_results(reader, name, port):
+async def read_results(reader, name):
     try:
         # Step 1: read 4-byte length
         length_data = await reader.readexactly(4)
@@ -97,8 +100,7 @@ async def read_results(reader, name, port):
         return message
 
     except asyncio.IncompleteReadError:
-        print(f"[{port}] disconnected")
-        return None  # client disconnected
+        return  # client disconnected
 
 async def handle_client(reader, writer, instructions, cfg):
     # reader --> used to receive from client
@@ -139,7 +141,7 @@ async def handle_client(reader, writer, instructions, cfg):
                 print(f"Instruction set 2:")
                 print(response2)
             else:
-                print(f"{name}: responses are the same")
+                # print(f"{name}: responses are the same")
                 print(response1)
 
         print(f"All instructions sent to {name}")
@@ -155,9 +157,11 @@ async def main():
     # open config file
     cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
 
-    global instructions
-    # instructions = generate_instructions(cfg)
-    # print([f"0x{inst:08x}" for inst in instructions])
+    if TESTING:
+        global instructions
+    else:
+        instructions = generate_instructions(cfg)
+        print([f"0x{inst:08x}" for inst in instructions])
 
     # creates a listening socket (TCP server)
     # handle_client: callback function

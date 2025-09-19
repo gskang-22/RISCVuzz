@@ -13,18 +13,18 @@ Things to consider:
 
 */
 
-#include <stdlib.h>
 #include <fcntl.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <stdatomic.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <unistd.h>
-#include <signal.h>
-#include <setjmp.h>
 #include <ucontext.h>
-#include <stdatomic.h>
+#include <unistd.h>
 
-#include "client.h"
 #include "../main.h"
+#include "client.h"
 
 // extern variables
 extern uint64_t xreg_init_data[];
@@ -44,260 +44,242 @@ extern volatile sig_atomic_t g_faults_this_run;
 
 // private variables
 const char *reg_names[] = {
-    "x0 (zero)", "x1 (ra)", "x2 (sp)", "x3 (gp)", "x4 (tp)",
-    "x5 (t0)", "x6 (t1)", "x7 (t2)", "x8 (s0/fp)", "x9 (s1)",
-    "x10 (a0)", "x11 (a1)", "x12 (a2)", "x13 (a3)", "x14 (a4)",
-    "x15 (a5)", "x16 (a6)", "x17 (a7)", "x18 (s2)", "x19 (s3)",
-    "x20 (s4)", "x21 (s5)", "x22 (s6)", "x23 (s7)", "x24 (s8)",
-    "x25 (s9)", "x26 (s10)", "x27 (s11)", "x28 (t3)", "x29 (t4)",
-    "x30 (t5)", "x31 (t6)"
-};
+    "x0 (zero)", "x1 (ra)",  "x2 (sp)",    "x3 (gp)",   "x4 (tp)",  "x5 (t0)",
+    "x6 (t1)",   "x7 (t2)",  "x8 (s0/fp)", "x9 (s1)",   "x10 (a0)", "x11 (a1)",
+    "x12 (a2)",  "x13 (a3)", "x14 (a4)",   "x15 (a5)",  "x16 (a6)", "x17 (a7)",
+    "x18 (s2)",  "x19 (s3)", "x20 (s4)",   "x21 (s5)",  "x22 (s6)", "x23 (s7)",
+    "x24 (s8)",  "x25 (s9)", "x26 (s10)",  "x27 (s11)", "x28 (t3)", "x29 (t4)",
+    "x30 (t5)",  "x31 (t6)"};
 
 sigjmp_buf jump_buffer;
 ucontext_t saved_context;
 
-uint64_t fcsr_output_data; // todo: consdier sending this to server for comparison too
+// todo: consider sending this to server for comparison too
+uint64_t fcsr_output_data;
 char alt_stack[SIGSTKSZ]; // Signal alternate stack
 
-size_t page_size = 4096; // sysconf(_SC_PAGESIZE)
+size_t page_size = 4096;  // sysconf(_SC_PAGESIZE)
 size_t sandbox_pages = 1; // 4 KB sandbox
 size_t guard_pages = 16;  // 64 KB guards (tunable)
 size_t start_offset = 0x20;
 
-// allocates a memory buffer to write to and execute
-// required for dynamic code injection
-uint8_t *allocate_executable_buffer()
-{
-    size_t total_pages = sandbox_pages + 2 * guard_pages;
-    size_t total_size = total_pages * page_size;
-
-    void *buf = mmap(NULL, total_size,
-                     PROT_NONE,
-                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-
-    if (buf == MAP_FAILED)
-    {
-        perror("mmap");
-        exit(1);
-    }
-
-    uint8_t *sandbox = buf + guard_pages * page_size;
-    return sandbox;
-}
-
-void free_executable_buffer(uint8_t *sandbox) {
-    size_t total_pages = sandbox_pages + 2 * guard_pages;
-    size_t total_size = total_pages * page_size;
-
-    // compute back the original base (buf)
-    void *buf = sandbox - guard_pages * page_size;
-
-    if ((uintptr_t)buf % page_size != 0) {
-    fprintf(stderr, "munmap addr not page-aligned: %p\n", buf);
-    }
-    if (total_size % page_size != 0) {
-        fprintf(stderr, "munmap len not page-size aligned: %zu\n", total_size);
-    }
-
-    if (munmap(buf, total_size) != 0) {
-        perror("munmap failed");
-    }
-}
-
-void prepare_sandbox(uint8_t *sandbox_ptr)
-{
-    // Reset sandbox to PROT_NONE after each run
-    if (mprotect(sandbox_ptr, page_size * sandbox_pages, PROT_NONE) != 0)
-    {
-        perror("mprotect NONE");
-        exit(1);
-    }
-}
-
-void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs, size_t num_instrs)
-{
-    // enable write access
-    if (mprotect(sandbox_ptr, sandbox_pages * page_size, PROT_READ | PROT_WRITE) != 0)
-    {
-        perror("mprotect");
-        exit(1);
-    }
-
-    // Fill sandbox with ebreak (0x00100073)
-    // for (size_t i = 0; i < sandbox_pages * page_size; i += 4) {
-    //     *(uint32_t *)(sandbox_ptr + i) = 0x00100073;
-    // }
-
-    // fill 2 ebreaks before the sandboxed instructions
-    for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
-        *(uint32_t *)(sandbox_ptr + start_offset - 2 * sizeof(uint32_t) + i) = 0x00100073;
-
-    // fill 2 ebreaks after the sandboxed instructions
-    for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
-        *(uint32_t *)(sandbox_ptr + start_offset + num_instrs * sizeof(uint32_t) + i) = 0x00100073;
-
-    // copy fuzzed instructions
-    memcpy(sandbox_ptr + start_offset, instrs, num_instrs * sizeof(uint32_t));
-
-    // flush instruction cache, preventing inconsistent results
-    asm volatile("fence.i" ::: "memory");
-
-    // make page executable
-    if (mprotect(sandbox_ptr, sandbox_pages * page_size, PROT_READ | PROT_EXEC) != 0)
-    {
-        perror("mprotect RX");
-        exit(1);
-    }
-}
-
 // Signal handler for SIGILL and SIGSEGV
-void signal_handler(int signo, siginfo_t *info, void *context)
-{
-    ucontext_t *uc = (ucontext_t *)context;
-    void *fault_addr = info->si_addr;
-    uintptr_t pc = uc->uc_mcontext.__gregs[REG_PC];  
-    // === Save general-purpose registers (x0-x31) ===
-    for (int i = 0; i < 32; i++)
-    {
-        xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
+void signal_handler(int signo, siginfo_t *info, void *context) {
+  ucontext_t *uc = (ucontext_t *)context;
+  void *fault_addr = info->si_addr;
+  uintptr_t pc = uc->uc_mcontext.__gregs[REG_PC];
+  // === Save general-purpose registers (x0-x31) ===
+  for (int i = 0; i < 32; i++) {
+    xreg_output_data[i] = uc->uc_mcontext.__gregs[i];
+  }
+
+  // === Save floating-point registers if available ===
+  union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
+  // Check if FP state is valid (might need a different check than NULL)
+  if (uc->uc_mcontext.__fpregs.__d.__f[0] !=
+      0) { // or some other appropriate check
+    for (int i = 0; i < 32; i++) {
+      freg_output_data[i] = fpstate->__d.__f[i];
     }
 
-    // === Save floating-point registers if available ===
-    union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
-    // Check if FP state is valid (might need a different check than NULL)
-    if (uc->uc_mcontext.__fpregs.__d.__f[0] != 0)
-    { // or some other appropriate check
-        for (int i = 0; i < 32; i++)
-        {
-            freg_output_data[i] = fpstate->__d.__f[i];
-        }
+    fcsr_output_data = fpstate->__d.__fcsr;
+  } else {
+    memset(freg_output_data, 0, sizeof(uint64_t) * 32);
+    fcsr_output_data = 0;
+  }
 
-        fcsr_output_data = fpstate->__d.__fcsr;
+  switch (signo) {
+  case SIGILL:
+    // log_append("Caught SIGILL (Illegal Instruction)\n");
+    // log_append("Faulting address: %p\n", fault_addr);
+    break;
+  case SIGBUS:
+    // log_append("Caught SIGBUS (Bus Error)\n");
+    break;
+  case SIGFPE:
+    // log_append("Caught SIGFPE (Floating Point Exception)\n");
+    break;
+  case SIGTRAP:
+    // log_append("Caught SIGTRAP: EBREAK\n");
+    break;
+  case SIGSEGV:
+    // log_append("Caught SIGSEGV (Segmentation Fault)\n");
+    // log_append("Faulting address: %p\n", fault_addr);
+
+    if (pc == (uintptr_t)fault_addr) {
+      // PC has escaped from sandbox; abort
+      // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
+      siglongjmp(jump_buffer, 4);
+    } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr &&
+                   (uintptr_t)fault_addr <
+                       ((uintptr_t)sandbox_ptr + page_size) ||
+               (uintptr_t)fault_addr >= USER_VA_MAX) {
+      // SIGSEGV occured in sandbox page or kernel. Abort
+      // log_append("SIGSEGV fault occured in restricted area. ERROR!!
+      // Returning\n");
+      siglongjmp(jump_buffer, 4);
+    } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
+      // log_append("threshold exceeded; proceeding anyway.\n");
+      siglongjmp(jump_buffer, 3); // threshold exceeded
     }
-    else
-    {
-        memset(freg_output_data, 0, sizeof(uint64_t) * 32);
-        fcsr_output_data = 0;
-    }
+    atomic_store_explicit(&g_fault_addr, (uintptr_t)fault_addr,
+                          memory_order_relaxed);
 
-    switch (signo)
-    {
-    case SIGILL:
-        // log_append("Caught SIGILL (Illegal Instruction)\n");
-        // log_append("Faulting address: %p\n", fault_addr);
-        break;
-    case SIGBUS:
-        // log_append("Caught SIGBUS (Bus Error)\n");
-        break;
-    case SIGFPE:
-        // log_append("Caught SIGFPE (Floating Point Exception)\n");
-        break;
-    case SIGTRAP:
-        // log_append("Caught SIGTRAP: EBREAK\n");
-        break;
-    case SIGSEGV:
-        // log_append("Caught SIGSEGV (Segmentation Fault)\n");
-        // log_append("Faulting address: %p\n", fault_addr);
-
-        if (pc == (uintptr_t)fault_addr) {
-            // PC has escaped from sandbox; abort
-            // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
-            siglongjmp(jump_buffer, 4);
-        } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr && (uintptr_t)fault_addr < ((uintptr_t)sandbox_ptr + page_size) || (uintptr_t)fault_addr >= USER_VA_MAX)
-        {
-            // SIGSEGV occured in sandbox page or kernel. Abort
-            // log_append("SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
-            siglongjmp(jump_buffer, 4);
-        } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN)
-        {
-            // log_append("threshold exceeded; proceeding anyway.\n");
-            siglongjmp(jump_buffer, 3); // threshold exceeded
-        }
-        atomic_store_explicit(&g_fault_addr, (uintptr_t)fault_addr, memory_order_relaxed);
-
-        g_faults_this_run++;
-        // log_append("g_faults_this_run: %d\n", g_faults_this_run);
-        siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
-    default:
-        log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
-    }
-    siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
+    g_faults_this_run++;
+    // log_append("g_faults_this_run: %d\n", g_faults_this_run);
+    siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
+  default:
+    log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
+  }
+  siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
 }
 
 // Setup signal handlers
-void setup_signal_handlers()
-{
-    // install alt stack (to allow clobbering of sp)
-    stack_t ss;
-    ss.ss_sp = alt_stack;
-    ss.ss_size = sizeof(alt_stack);
-    ss.ss_flags = 0;
-    sigaltstack(&ss, NULL);
+void setup_signal_handlers() {
+  // install alt stack (to allow clobbering of sp)
+  stack_t ss;
+  ss.ss_sp = alt_stack;
+  ss.ss_size = sizeof(alt_stack);
+  ss.ss_flags = 0;
+  sigaltstack(&ss, NULL);
 
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_sigaction = (void *)signal_trampoline;
-    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_sigaction = (void *)signal_trampoline;
+  sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
-    sigemptyset(&sa.sa_mask);
-    sigaction(SIGILL, &sa, NULL);
-    sigaction(SIGSEGV, &sa, NULL);
-    sigaction(SIGBUS, &sa, NULL);
-    sigaction(SIGFPE, &sa, NULL);
-    sigaction(SIGTRAP, &sa, NULL);
+  sigemptyset(&sa.sa_mask);
+  sigaction(SIGILL, &sa, NULL);
+  sigaction(SIGSEGV, &sa, NULL);
+  sigaction(SIGBUS, &sa, NULL);
+  sigaction(SIGFPE, &sa, NULL);
+  sigaction(SIGTRAP, &sa, NULL);
 }
 
-void unmap_vdso_vvar()
-{
-    FILE *maps = fopen("/proc/self/maps", "r");
-    if (!maps)
-    {
-        perror("fopen /proc/self/maps");
-        exit(EXIT_FAILURE);
-    }
+// allocates a memory buffer to write to and execute
+// required for dynamic code injection
+uint8_t *allocate_executable_buffer() {
+  size_t total_pages = sandbox_pages + 2 * guard_pages;
+  size_t total_size = total_pages * page_size;
 
-    char line[256];
-    while (fgets(line, sizeof(line), maps))
-    {
-        if (strstr(line, "[vdso]") || strstr(line, "[vdso_data]") || strstr(line, "[vvar]"))
-        {
-            unsigned long start, end;
-            if (sscanf(line, "%lx-%lx", &start, &end) == 2)
-            {
-                // printf("Unmapping %lx - %lx\n", start, end);
-                if (munmap((void *)start, end - start) != 0)
-                {
-                    perror("Warning: unmapping has failed!!");
-                }
-            }
-        }
-    }
-    fclose(maps);
+  void *buf =
+      mmap(NULL, total_size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
+  if (buf == MAP_FAILED) {
+    perror("mmap");
+    exit(1);
+  }
+
+  uint8_t *sandbox = buf + guard_pages * page_size;
+  return sandbox;
 }
 
-void print_xreg_changes(void)
-{
-    for (int i = 0; i < 32; i++)
-    {
-        if (i == 9)  // skip x9 as it is used for storing the return jump pointer out of sandbox
-            continue;
+void free_executable_buffer(uint8_t *sandbox) {
+  size_t total_pages = sandbox_pages + 2 * guard_pages;
+  size_t total_size = total_pages * page_size;
 
-        if (xreg_init_data[i] != xreg_output_data[i])
-        {
-            log_append("%-4s changed: 0x%016lx -> 0x%016lx\n",
-                       reg_names[i], xreg_init_data[i], xreg_output_data[i]);
-        }
-    }
+  // compute back the original base (buf)
+  void *buf = sandbox - guard_pages * page_size;
+
+  if ((uintptr_t)buf % page_size != 0) {
+    fprintf(stderr, "munmap addr not page-aligned: %p\n", buf);
+  }
+  if (total_size % page_size != 0) {
+    fprintf(stderr, "munmap len not page-size aligned: %zu\n", total_size);
+  }
+
+  if (munmap(buf, total_size) != 0) {
+    perror("munmap failed");
+  }
 }
 
-void print_freg_changes(void)
-{
-    for (int i = 0; i < 32; i++)
-    {
-        if (freg_init_data[i] != freg_output_data[i])
-        {
-            log_append("f%-3d changed: 0x%016lx -> 0x%016lx\n",
-                       i, freg_init_data[i], freg_output_data[i]);
+// Reset sandbox to PROT_NONE after each run
+void prepare_sandbox(uint8_t *sandbox_ptr) {
+  if (mprotect(sandbox_ptr, page_size * sandbox_pages, PROT_NONE) != 0) {
+    perror("mprotect NONE");
+    exit(1);
+  }
+}
+
+void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs,
+                         size_t num_instrs) {
+  // enable write access
+  if (mprotect(sandbox_ptr, sandbox_pages * page_size,
+               PROT_READ | PROT_WRITE) != 0) {
+    perror("mprotect");
+    exit(1);
+  }
+
+  // Fill sandbox with ebreak (0x00100073)
+  // for (size_t i = 0; i < sandbox_pages * page_size; i += 4) {
+  //     *(uint32_t *)(sandbox_ptr + i) = 0x00100073;
+  // }
+
+  // fill 2 ebreaks before the sandboxed instructions
+  for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
+    *(uint32_t *)(sandbox_ptr + start_offset - 2 * sizeof(uint32_t) + i) =
+        0x00100073;
+
+  // fill 2 ebreaks after the sandboxed instructions
+  for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
+    *(uint32_t *)(sandbox_ptr + start_offset + num_instrs * sizeof(uint32_t) +
+                  i) = 0x00100073;
+
+  // copy fuzzed instructions
+  memcpy(sandbox_ptr + start_offset, instrs, num_instrs * sizeof(uint32_t));
+
+  // flush instruction cache, preventing inconsistent results
+  asm volatile("fence.i" ::: "memory");
+
+  // make page executable
+  if (mprotect(sandbox_ptr, sandbox_pages * page_size, PROT_READ | PROT_EXEC) !=
+      0) {
+    perror("mprotect RX");
+    exit(1);
+  }
+}
+
+void unmap_vdso_vvar() {
+  FILE *maps = fopen("/proc/self/maps", "r");
+  if (!maps) {
+    perror("fopen /proc/self/maps");
+    exit(EXIT_FAILURE);
+  }
+
+  char line[256];
+  while (fgets(line, sizeof(line), maps)) {
+    if (strstr(line, "[vdso]") || strstr(line, "[vdso_data]") ||
+        strstr(line, "[vvar]")) {
+      unsigned long start, end;
+      if (sscanf(line, "%lx-%lx", &start, &end) == 2) {
+        // printf("Unmapping %lx - %lx\n", start, end);
+        if (munmap((void *)start, end - start) != 0) {
+          perror("Warning: unmapping has failed!!");
         }
+      }
     }
+  }
+  fclose(maps);
+}
+
+void print_xreg_changes(void) {
+  for (int i = 0; i < 32; i++) {
+    if (i == 9) // skip x9 as it is used for storing the return jump pointer out
+                // of sandbox
+      continue;
+
+    if (xreg_init_data[i] != xreg_output_data[i]) {
+      log_append("%-4s changed: 0x%016lx -> 0x%016lx\n", reg_names[i],
+                 xreg_init_data[i], xreg_output_data[i]);
+    }
+  }
+}
+
+void print_freg_changes(void) {
+  for (int i = 0; i < 32; i++) {
+    if (freg_init_data[i] != freg_output_data[i]) {
+      log_append("f%-3d changed: 0x%016lx -> 0x%016lx\n", i, freg_init_data[i],
+                 freg_output_data[i]);
+    }
+  }
 }
