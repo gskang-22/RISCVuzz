@@ -20,6 +20,7 @@ Things to consider:
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include <ucontext.h>
 #include <unistd.h>
 
@@ -32,7 +33,7 @@ extern uint64_t xreg_output_data[];
 extern uint64_t freg_init_data[];
 extern uint64_t freg_output_data[];
 
-extern void signal_trampoline(); // from assembly
+extern void signal_trampoline();  // from assembly
 extern uint8_t *sandbox_ptr;
 
 extern volatile atomic_uintptr_t g_fault_addr;
@@ -40,7 +41,7 @@ extern volatile sig_atomic_t g_faults_this_run;
 
 // private definitions
 #define MAX_FAULTS_PER_RUN 10
-#define USER_VA_MAX (1ULL << 47) // 0x8000_000000000
+#define USER_VA_MAX (1ULL << 47)  // 0x8000_000000000
 
 // private variables
 const char *reg_names[] = {
@@ -56,11 +57,11 @@ ucontext_t saved_context;
 
 // todo: consider sending this to server for comparison too
 uint64_t fcsr_output_data;
-char alt_stack[SIGSTKSZ]; // Signal alternate stack
+char alt_stack[SIGSTKSZ];  // Signal alternate stack
 
-size_t page_size = 4096;  // sysconf(_SC_PAGESIZE)
-size_t sandbox_pages = 1; // 4 KB sandbox
-size_t guard_pages = 16;  // 64 KB guards (tunable)
+size_t page_size = 4096;   // sysconf(_SC_PAGESIZE)
+size_t sandbox_pages = 1;  // 4 KB sandbox
+size_t guard_pages = 16;   // 64 KB guards (tunable)
 size_t start_offset = 0x20;
 
 // Signal handler for SIGILL and SIGSEGV
@@ -77,7 +78,7 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
   union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
   // Check if FP state is valid (might need a different check than NULL)
   if (uc->uc_mcontext.__fpregs.__d.__f[0] !=
-      0) { // or some other appropriate check
+      0) {  // or some other appropriate check
     for (int i = 0; i < 32; i++) {
       freg_output_data[i] = fpstate->__d.__f[i];
     }
@@ -89,49 +90,53 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
   }
 
   switch (signo) {
-  case SIGILL:
-    // log_append("Caught SIGILL (Illegal Instruction)\n");
-    // log_append("Faulting address: %p\n", fault_addr);
-    break;
-  case SIGBUS:
-    // log_append("Caught SIGBUS (Bus Error)\n");
-    break;
-  case SIGFPE:
-    // log_append("Caught SIGFPE (Floating Point Exception)\n");
-    break;
-  case SIGTRAP:
-    // log_append("Caught SIGTRAP: EBREAK\n");
-    break;
-  case SIGSEGV:
-    // log_append("Caught SIGSEGV (Segmentation Fault)\n");
-    // log_append("Faulting address: %p\n", fault_addr);
+    case SIGILL:
+      // log_append("Caught SIGILL (Illegal Instruction)\n");
+      // log_append("Faulting address: %p\n", fault_addr);
+    case SIGBUS:
+      // log_append("Caught SIGBUS (Bus Error)\n");
+    case SIGFPE:
+      // log_append("Caught SIGFPE (Floating Point Exception)\n");
+    case SIGTRAP:
+      // log_append("Caught SIGTRAP: EBREAK\n");
 
-    if (pc == (uintptr_t)fault_addr) {
-      // PC has escaped from sandbox; abort
-      // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
-      siglongjmp(jump_buffer, 4);
-    } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr &&
-                   (uintptr_t)fault_addr <
-                       ((uintptr_t)sandbox_ptr + page_size) ||
-               (uintptr_t)fault_addr >= USER_VA_MAX) {
-      // SIGSEGV occured in sandbox page or kernel. Abort
-      // log_append("SIGSEGV fault occured in restricted area. ERROR!!
-      // Returning\n");
-      siglongjmp(jump_buffer, 4);
-    } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
-      // log_append("threshold exceeded; proceeding anyway.\n");
-      siglongjmp(jump_buffer, 3); // threshold exceeded
-    }
-    atomic_store_explicit(&g_fault_addr, (uintptr_t)fault_addr,
-                          memory_order_relaxed);
+      siglongjmp(jump_buffer, 1);  // non-SIGSEGV fault
+      break;
 
-    g_faults_this_run++;
-    // log_append("g_faults_this_run: %d\n", g_faults_this_run);
-    siglongjmp(jump_buffer, 2); // SIGSEV occured; retry
-  default:
-    log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
+    case SIGSEGV:
+      // log_append("Caught SIGSEGV (Segmentation Fault)\n");
+      // log_append("Faulting address: %p\n", fault_addr);
+
+      if (pc == (uintptr_t)fault_addr) {
+        // PC has escaped from sandbox. Abort
+        // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
+        siglongjmp(jump_buffer, 4);
+      } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr &&
+                     (uintptr_t)fault_addr <
+                         ((uintptr_t)sandbox_ptr + page_size) ||
+                 (uintptr_t)fault_addr >= USER_VA_MAX) {
+        // SIGSEGV occured in sandbox page or kernel. Abort
+        // log_append("SIGSEGV fault occured in restricted area. ERROR!!
+        // Returning\n");
+        siglongjmp(jump_buffer, 4);
+      } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
+        // log_append("threshold exceeded; proceeding anyway.\n");
+        siglongjmp(jump_buffer, 3);  // threshold exceeded
+      }
+
+      atomic_store_explicit(&g_fault_addr, (uintptr_t)fault_addr,
+                            memory_order_relaxed);
+      g_faults_this_run++;
+      // log_append("g_faults_this_run: %d\n", g_faults_this_run);
+      siglongjmp(jump_buffer, 2);  // SIGSEV occured; retry
+
+    case SIGALRM:
+      log_append("Timeout: sandbox exceeded 1 second\n");
+      siglongjmp(jump_buffer, 5);  // return with code 5 = timeout
+      break;
+    default:
+      log_append("ERROR: SHOULD NOT RUN HERE!! %d\n", signo);
   }
-  siglongjmp(jump_buffer, 1); // non-SIGSEGV fault
 }
 
 // Setup signal handlers
@@ -154,6 +159,7 @@ void setup_signal_handlers() {
   sigaction(SIGBUS, &sa, NULL);
   sigaction(SIGFPE, &sa, NULL);
   sigaction(SIGTRAP, &sa, NULL);
+  sigaction(SIGALRM, &sa, NULL);
 }
 
 // allocates a memory buffer to write to and execute
@@ -264,8 +270,8 @@ void unmap_vdso_vvar() {
 
 void print_xreg_changes(void) {
   for (int i = 0; i < 32; i++) {
-    if (i == 9) // skip x9 as it is used for storing the return jump pointer out
-                // of sandbox
+    if (i == 9)  // skip x9 as it is used for storing the return jump pointer
+                 // out of sandbox
       continue;
 
     if (xreg_init_data[i] != xreg_output_data[i]) {

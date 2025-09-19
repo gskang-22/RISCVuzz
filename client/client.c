@@ -6,11 +6,13 @@ ease of futher expansion.
 */
 
 #include "client.h"
-#include "../main.h"
-#include "sandbox.h"
+
 #include <errno.h>
 #include <signal.h>
 #include <stdatomic.h>
+
+#include "../main.h"
+#include "sandbox.h"
 
 // extern functions
 extern void run_sandbox();
@@ -30,6 +32,8 @@ void unmap_all_regions(void);
 static void run_until_quiet(int8_t fill_byte);
 void *alloc_sandbox_stack(size_t stack_size);
 void free_sandbox_stack(void *stack_top, size_t stack_size);
+void arm_timeout_timer(void);
+void disarm_timeout_timer(void);
 int run_client(uint32_t *instructions, size_t n_instructions);
 
 // extern variables
@@ -42,7 +46,7 @@ extern size_t sandbox_pages;
 extern size_t page_size;
 
 // private definitions
-#define SANDBOX_STACK_SIZE (64 * 1024) // e.g. 64KB
+#define SANDBOX_STACK_SIZE (64 * 1024)  // e.g. 64KB
 #define STACK_GUARD_PAGES 1
 
 // private variables
@@ -51,8 +55,8 @@ uint8_t *sandbox_ptr;
 volatile sig_atomic_t g_faults_this_run = 0;
 volatile atomic_uintptr_t g_fault_addr = 0;
 mapped_region_t *g_regions = NULL;
-size_t g_regions_len = 0; // global counter variable (number of valid entries
-                          // currently stored in the g_regions array)
+size_t g_regions_len = 0;  // global counter variable (number of valid entries
+                           // currently stored in the g_regions array)
 
 memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0;
@@ -60,9 +64,9 @@ static size_t g_diffs_cap = 0;
 
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
-    0x00000013, // nop to be replaced
+    0x00000013,  // nop to be replaced
 
-    0x00048067 // jalr x0, 0(x9)
+    0x00048067  // jalr x0, 0(x9)
 };
 
 int run_client(uint32_t *instructions, size_t n_instructions) {
@@ -87,17 +91,24 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
     inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
     // unmap using munmap
-    unmap_all_regions(); // unmap g_regions
+    unmap_all_regions();  // unmap g_regions
 
     int jump_rc = sigsetjmp(jump_buffer, 1);
     if (jump_rc == 0) {
+      arm_timeout_timer();
       run_sandbox(sandbox_ptr);
-      continue; // no faults raised
-    } else if (jump_rc == 1 || jump_rc == 4) {
-      // non SIGSEGV fault raised OR SIGSEGV fault in sandbox memory
-      continue;
-    }
+      disarm_timeout_timer();
+      continue;  // no faults raised
+    } else {
+      disarm_timeout_timer();
 
+      if (jump_rc == 1 || jump_rc == 4 || jump_rc == 5) {
+        // 1. non SIGSEGV fault raised
+        // 4. SIGSEGV fault in sandbox memory
+        // 5. timer timeout: sandbox stuck
+        continue;
+      }
+    }
     // SIGSEGV if code reaches here
     run_until_quiet(0x00);
     report_diffs(0x00);
@@ -105,8 +116,8 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
     // log_append("Mapped regions:\n");
     // for (size_t i = 0; i < g_regions_len; i++)
     // {
-    //     log_append("region %zu: addr=%p, len=%zu\n", i, g_regions[i].addr,
-    //     g_regions[i].len);
+    //     log_append("region %zu: addr=%p, len=%zu\n", i,
+    //     g_regions[i].addr, g_regions[i].len);
     // }
 
     prepare_sandbox(sandbox_ptr);
@@ -138,10 +149,9 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
 static void run_until_quiet(int8_t fill_byte) {
   g_fault_addr = 0;
   int retries = 0;
-  const int MAX_RETRIES = 20; // set limit
+  const int MAX_RETRIES = 20;  // set limit
 
   while (1) {
-
     if (++retries > MAX_RETRIES) {
       log_append("ERROR: Max retries exceeded, aborting run_until_quiet\n");
       // fflush(stdout);
@@ -151,16 +161,20 @@ static void run_until_quiet(int8_t fill_byte) {
     int jump_rc = sigsetjmp(jump_buffer, 1);
 
     if (jump_rc == 0) {
+      arm_timeout_timer();
       run_sandbox(sandbox_ptr);
+      disarm_timeout_timer();
       break;
-    } else if (jump_rc == 2) {
-      // segv happened; map and retry
-      void *base = page_align_down((void *)g_fault_addr);
-      map_two_pages(base, fill_byte);
-      continue;
-    } else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4) {
-      log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
-      break;
+    } else {
+      disarm_timeout_timer();
+      if (jump_rc == 2) {
+        // segv happened; map and retry
+        void *base = page_align_down((void *)g_fault_addr);
+        map_two_pages(base, fill_byte);
+      } else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4) {
+        log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
+        break;
+      }
     }
   }
   log_append("run_until_quiet finished\n");
@@ -168,8 +182,7 @@ static void run_until_quiet(int8_t fill_byte) {
 
 // Maps two pages of memory (base and base + pagesize)
 static void map_two_pages(void *base, uint8_t fill_byte) {
-  if (g_regions_len >= MAX_MAPPED_PAGES)
-    return;
+  if (g_regions_len >= MAX_MAPPED_PAGES) return;
 
   if (base == NULL) {
     log_append("map_two_pages: refusing to map at NULL base\n");
@@ -183,12 +196,12 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
   }
 
   /* if region exists at exactly this base, skip */
-  if (region_exists(base))
-    return;
+  if (region_exists(base)) return;
 
-  void *r = mmap(base, 2 * page_size, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, // MAP_FIXED
-                 -1, 0);
+  void *r =
+      mmap(base, 2 * page_size, PROT_READ | PROT_WRITE,
+           MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,  // MAP_FIXED
+           -1, 0);
   log_append("mapping: %p\n", r);
   if (r == MAP_FAILED) {
     int e = errno;
@@ -196,7 +209,7 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
                strerror(e));
 
     // perror("mmap failed for lazy mapping");
-    siglongjmp(jump_buffer, 4); // abort / skip this test case
+    siglongjmp(jump_buffer, 4);  // abort / skip this test case
   }
 
   log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
@@ -271,15 +284,18 @@ static void report_diffs(uint8_t expected) {
 
         /* probe the first byte of the page before scanning */
         if (!probe_read_byte(page_addr, &sample)) {
-          printf("Skipping page %zu of region %zu at %p (probe failed)\n", pg,
-                 i, page_addr);
+          printf(
+              "Skipping page %zu of region %zu at %p (probe "
+              "failed)\n",
+              pg, i, page_addr);
           fflush(stdout);
           continue;
         }
 
         /* If probe succeeded, scan that page safely in a loop.
            If scanning the rest of the page faults, probe_read_byte will
-           catch that on the next page loop (we still try to be conservative).
+           catch that on the next page loop (we still try to be
+           conservative).
          */
         for (size_t off = 0; off < page_size; ++off) {
           uint8_t newv;
@@ -292,9 +308,11 @@ static void report_diffs(uint8_t expected) {
               volatile uint8_t v = page_addr[off];
               newv = (uint8_t)v;
             } else {
-              log_append("Fault while scanning page %zu offset %zu; skipping "
-                         "rest of page\n",
-                         pg, off);
+              log_append(
+                  "Fault while scanning page %zu offset %zu; "
+                  "skipping "
+                  "rest of page\n",
+                  pg, off);
               break;
             }
           }
@@ -332,8 +350,7 @@ static bool probe_read_byte(uint8_t *addr, uint8_t *out) {
 
 static bool region_exists(void *addr) {
   for (size_t i = 0; i < g_regions_len; i++)
-    if (g_regions[i].addr == addr)
-      return true;
+    if (g_regions[i].addr == addr) return true;
   return false;
 }
 
@@ -376,7 +393,7 @@ void unmap_all_regions(void) {
 }
 
 void *alloc_sandbox_stack(size_t stack_size) {
-  size_t ps = 4096; // call sysconf(_SC_PAGESIZE) during init
+  size_t ps = 4096;  // call sysconf(_SC_PAGESIZE) during init
   size_t total = stack_size + STACK_GUARD_PAGES * ps;
   void *base = mmap(NULL, total, PROT_READ | PROT_WRITE,
                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -398,4 +415,18 @@ void free_sandbox_stack(void *stack_top, size_t stack_size) {
   void *base = (uint8_t *)stack_top - (stack_size + STACK_GUARD_PAGES * ps);
   size_t total = stack_size + STACK_GUARD_PAGES * ps;
   munmap(base, total);
+}
+
+void arm_timeout_timer(void) {
+  struct itimerval timer;
+  timer.it_value.tv_sec = 1;  // 1 second timeout
+  timer.it_value.tv_usec = 0;
+  timer.it_interval.tv_sec = 0;
+  timer.it_interval.tv_usec = 0;
+  setitimer(ITIMER_REAL, &timer, NULL);
+}
+
+void disarm_timeout_timer(void) {
+  struct itimerval timer = {0};
+  setitimer(ITIMER_REAL, &timer, NULL);
 }
