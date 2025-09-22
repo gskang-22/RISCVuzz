@@ -91,36 +91,36 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
 
   switch (signo) {
     case SIGILL:
-      // log_append("Caught SIGILL (Illegal Instruction)\n");
+      log_append("Caught SIGILL (Illegal Instruction)\n");
       // log_append("Faulting address: %p\n", fault_addr);
     case SIGBUS:
-      // log_append("Caught SIGBUS (Bus Error)\n");
+      log_append("Caught SIGBUS (Bus Error)\n");
     case SIGFPE:
-      // log_append("Caught SIGFPE (Floating Point Exception)\n");
+      log_append("Caught SIGFPE (Floating Point Exception)\n");
     case SIGTRAP:
-      // log_append("Caught SIGTRAP: EBREAK\n");
+      log_append("Caught SIGTRAP: EBREAK\n");
 
       siglongjmp(jump_buffer, 1);  // non-SIGSEGV fault
       break;
 
     case SIGSEGV:
-      // log_append("Caught SIGSEGV (Segmentation Fault)\n");
+      log_append("Caught SIGSEGV (Segmentation Fault)\n");
       // log_append("Faulting address: %p\n", fault_addr);
 
       if (pc == (uintptr_t)fault_addr) {
         // PC has escaped from sandbox. Abort
-        // log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
+        log_append("[jump] PC escaped sandbox: 0x%lx\n", pc);
         siglongjmp(jump_buffer, 4);
       } else if ((uintptr_t)fault_addr >= (uintptr_t)sandbox_ptr &&
                      (uintptr_t)fault_addr <
                          ((uintptr_t)sandbox_ptr + page_size) ||
                  (uintptr_t)fault_addr >= USER_VA_MAX) {
         // SIGSEGV occured in sandbox page or kernel. Abort
-        // log_append("SIGSEGV fault occured in restricted area. ERROR!!
-        // Returning\n");
+        log_append(
+            "SIGSEGV fault occured in restricted area. ERROR!! Returning\n");
         siglongjmp(jump_buffer, 4);
       } else if (g_faults_this_run >= MAX_FAULTS_PER_RUN) {
-        // log_append("threshold exceeded; proceeding anyway.\n");
+        log_append("threshold exceeded; proceeding anyway.\n");
         siglongjmp(jump_buffer, 3);  // threshold exceeded
       }
 
@@ -131,7 +131,7 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
       siglongjmp(jump_buffer, 2);  // SIGSEV occured; retry
 
     case SIGALRM:
-      log_append("Timeout: sandbox exceeded 1 second\n");
+      log_append("Timeout: sandbox exceeded 100ms\n");
       siglongjmp(jump_buffer, 5);  // return with code 5 = timeout
       break;
     default:
