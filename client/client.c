@@ -373,7 +373,7 @@ static void fill_all_pages(uint8_t fill_byte) {
 // Unmap all mapped regions and reset g_regions_len
 void unmap_all_regions(void) {
   for (size_t i = 0; i < g_regions_len; i++) {
-    log_append("munmapping: %p\n", g_regions[i].addr);
+    // log_append("munmapping: %p\n", g_regions[i].addr);
     if ((uintptr_t)g_regions[i].addr % page_size != 0) {
       fprintf(stderr, "munmap addr not page-aligned: %p\n", g_regions[i].addr);
       fflush(stdout);

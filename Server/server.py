@@ -136,10 +136,11 @@ async def handle_client(reader, writer, instructions, cfg):
             # Compare responses
             if response1 != response2:
                 print(f"[ERROR] Responses differ for client {name} on batch starting at index {instr_index - len(batch)}")
-                print(f"Instruction set 1:")
+                # print(f"Instruction set 1:")
                 print(response1)
-                print(f"Instruction set 2:")
-                print(response2)
+                # print(f"Instruction set 2:")
+                # print(response2)
+                input("Paused for debugging. Press Enter to continue...")
             else:
                 # print(f"{name}: responses are the same")
                 print(response1)
