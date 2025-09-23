@@ -1,2 +1,4 @@
 # Ignore Rust build artifacts
 /Server/vector_generator/target
+tmp.o
+tmp.S

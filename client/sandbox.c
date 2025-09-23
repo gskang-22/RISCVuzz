@@ -91,15 +91,10 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
 
   switch (signo) {
     case SIGILL:
-      log_append("Caught SIGILL (Illegal Instruction)\n");
-      // log_append("Faulting address: %p\n", fault_addr);
     case SIGBUS:
-      log_append("Caught SIGBUS (Bus Error)\n");
     case SIGFPE:
-      log_append("Caught SIGFPE (Floating Point Exception)\n");
     case SIGTRAP:
-      log_append("Caught SIGTRAP: EBREAK\n");
-
+      log_append("Caught signal %d: %s\n", signo, strsignal(signo));
       siglongjmp(jump_buffer, 1);  // non-SIGSEGV fault
       break;
 
