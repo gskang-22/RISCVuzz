@@ -1,23 +1,21 @@
 import struct
 import asyncio
 from generate import generate_instructions
+import difflib
 
-TESTING = False
+TESTING = True
 
 instructions = [
-    # instructions to be injected
-    # 0x00000013, # nop
-    # 0x10028027, # ghostwrite
-    # 0xFFFFFFFF, # illegal instruction
-    # 0x00008067, # ret
-    # 0x00050067, # jump to x10
-    # 0x00048067, # jump to x9
-    # 0x00058067, # jump to x11
-    # 0x0000a103, # lw x2, 0(x1)
-    # 0x0142b183, # ld x3, 20(x5)
-    0x00dd31af, # amoadd.d gp,a3,(s10)
-    0x00dcb1af, # amoadd.d gp,a3,(s9)
-    0x00dc31af, # amoadd.d gp,a3,(s8) 
+0x77bfb957, 
+ 0x654fa0d7, 
+ 0x01db52b3, 
+ 0xc415a057, 
+ 0xbf705957, 
+ 0x01b920a7, 
+ 0x6e6dda27, 
+ 0xadfde4d7, 
+ 0x00246233, 
+ 0x28cb5857
 ]
 
 clients = {}  # name -> writer
@@ -136,11 +134,22 @@ async def handle_client(reader, writer, instructions, cfg):
             # Compare responses
             if response1 != response2:
                 print(f"[ERROR] Responses differ for client {name} on batch starting at index {instr_index - len(batch)}")
-                # print(f"Instruction set 1:")
+                print(f"Instruction set 1:")
                 print(response1)
-                # print(f"Instruction set 2:")
-                # print(response2)
+                print(f"Instruction set 2:")
+                print(response2)
+
                 input("Paused for debugging. Press Enter to continue...")
+                
+                print("Diff between responses:")
+                # Split responses into lines and keep line endings
+                diff = difflib.unified_diff(
+                    response1.splitlines(keepends=True),
+                    response2.splitlines(keepends=True),
+                    fromfile='response1',
+                    tofile='response2',
+                )
+                print(''.join(diff))  # print the diff
             else:
                 # print(f"{name}: responses are the same")
                 print(response1)
@@ -160,6 +169,7 @@ async def main():
 
     if TESTING:
         global instructions
+        print([f"0x{inst:08x}" for inst in instructions])
     else:
         instructions = generate_instructions(cfg)
         print([f"0x{inst:08x}" for inst in instructions])

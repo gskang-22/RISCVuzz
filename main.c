@@ -121,7 +121,6 @@ int main() {
     send_log();  // send results back
 
     free(instructions);
-    memset(g_regions, 0, MAX_MAPPED_PAGES * sizeof(*g_regions));
   }
 
   close(sock);
@@ -145,7 +144,6 @@ int main() {
         g_regions[i].len = 0;
       }
     }
-    memset(g_regions, 0, MAX_MAPPED_PAGES * sizeof(*g_regions));
   }
 
   printf("Done\n");
