@@ -155,7 +155,7 @@ async def handle_client(reader, writer, instructions, cfg):
 
 async def main():
     # open config file
-    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
+    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/Server/config.cfg")
 
     if TESTING:
         global instructions

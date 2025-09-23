@@ -160,7 +160,7 @@ async def handle_uart(port, board_name, instructions, cfg):
         print(f"[{board_name} on {port}] closed")
 
 async def main():
-    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
+    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/Server/config.cfg")
 
     tasks = [handle_uart(port, name, instructions, cfg) for port, name in UART_PORTS.items()]
     await asyncio.gather(*tasks)

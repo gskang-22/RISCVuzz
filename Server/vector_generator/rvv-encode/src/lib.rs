@@ -158,7 +158,7 @@ impl Config {
 // / ```
 pub fn encode(inst: &str) -> Result<Option<u32>, Error> {
     // get config variables from config file
-    let config = Config::from_cfg_file("/home/szekang/Documents/RISCVuzz/config.cfg");
+    let config = Config::from_cfg_file("/home/szekang/Documents/RISCVuzz/Server/config.cfg");
 
     let pairs = if let Ok(result) = AsmParser::parse(Rule::inst, inst.trim()) {
         result

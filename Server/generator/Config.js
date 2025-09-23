@@ -40,7 +40,7 @@ export const COPTS_ISA = makeEnum(
  */
 export const configFields = {
   ISA: { name: 'ISA', type: CONFIG_TYPE.CHOOSE_ONE, opts: Object.values(COPTS_ISA) },
-  ABI: { name: 'ABI', type: CONFIG_TYPE.BOOL,       default: false },
+  ABI: { name: 'ABI', type: CONFIG_TYPE.BOOL, default: false },
 }
 
 /**
@@ -51,8 +51,8 @@ export const configFields = {
 export const configDefault = Object.freeze(
   Object.fromEntries(
     Object.entries(configFields).map(
-      ([k,v]) => [k, (v.default ?? v.opts[0])]
-)));
+      ([k, v]) => [k, (v.default ?? v.opts[0])]
+    )));
 
 // import fs from 'fs';
 // // Read JSON file once
@@ -106,7 +106,7 @@ function readCfg(filePath) {
 }
 
 // Read the CFG file
-const cfg = readCfg("/home/szekang/Documents/RISCVuzz/config.cfg");
+const cfg = readCfg("/home/szekang/Documents/RISCVuzz/Server/config.cfg");
 
 // Export for other modules
 export default cfg;

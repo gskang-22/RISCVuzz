@@ -160,7 +160,7 @@ async def handle_client(reader, writer, instructions, cfg):
 async def main():
 
     # open config file
-    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/config.cfg")
+    cfg = read_cfg("/home/szekang/Documents/RISCVuzz/Server/config.cfg")
     global instructions
     # instructions = generate_instructions(cfg)
     # print([f"0x{inst:08x}" for inst in instructions])
