@@ -41,7 +41,8 @@ extern volatile sig_atomic_t g_faults_this_run;
 
 // private definitions
 #define MAX_FAULTS_PER_RUN 10
-#define USER_VA_MAX (1ULL << 47)  // 0x8000_000000000
+#define USER_VA_MAX (1ULL << 47)          // 0x8000_000000000
+#define SANDBOX_BASE_ADDR 0x1000000000UL  // 64 GB
 
 // private variables
 const char *reg_names[] = {
@@ -163,11 +164,11 @@ uint8_t *allocate_executable_buffer() {
   size_t total_pages = sandbox_pages + 2 * guard_pages;
   size_t total_size = total_pages * page_size;
 
-  void *buf =
-      mmap(NULL, total_size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  void *buf = mmap((void *)SANDBOX_BASE_ADDR, total_size, PROT_NONE,
+                   MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE, -1, 0);
 
   if (buf == MAP_FAILED) {
-    perror("mmap");
+    perror("mmap sandbox buffer");
     exit(1);
   }
 

@@ -6,16 +6,18 @@ import difflib
 TESTING = True
 
 instructions = [
+0x00dd31af,
 0x77bfb957, 
- 0x654fa0d7, 
- 0x01db52b3, 
- 0xc415a057, 
- 0xbf705957, 
- 0x01b920a7, 
- 0x6e6dda27, 
- 0xadfde4d7, 
- 0x00246233, 
- 0x28cb5857
+
+#  0x654fa0d7, 
+#  0x01db52b3, 
+#  0xc415a057, 
+#  0xbf705957, 
+#  0x01b920a7, 
+#  0x6e6dda27, 
+#  0xadfde4d7, 
+#  0x00246233, 
+#  0x28cb5857, 
 ]
 
 clients = {}  # name -> writer

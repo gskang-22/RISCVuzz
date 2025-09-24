@@ -49,6 +49,7 @@ extern size_t page_size;
 // private definitions
 #define SANDBOX_STACK_SIZE (64 * 1024)  // e.g. 64KB
 #define STACK_GUARD_PAGES 1
+#define STACK_BASE_ADDR 0x2000000000UL  // 128 GB
 
 // private variables
 uint8_t *sandbox_ptr;
@@ -83,7 +84,8 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
     // void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
     // xreg_init_data[2] = (uint64_t)sandbox_sp;
 
-    log_append("=== Running fuzz %zu: 0x%08x ===\n", i, instructions[i]);
+    log_append("======= Running fuzz %zu: 0x%08x =======\n", i,
+               instructions[i]);
 
     // prepare sandbox
     prepare_sandbox(sandbox_ptr);
@@ -394,16 +396,19 @@ void unmap_all_regions(void) {
 }
 
 void *alloc_sandbox_stack(size_t stack_size) {
-  size_t ps = 4096;  // call sysconf(_SC_PAGESIZE) during init
-  size_t total = stack_size + STACK_GUARD_PAGES * ps;
-  void *base = mmap(NULL, total, PROT_READ | PROT_WRITE,
-                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  size_t total = stack_size + STACK_GUARD_PAGES * page_size;
+
+  // void *base = mmap(NULL, total, PROT_READ | PROT_WRITE,
+  //                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  void *base =
+      mmap((void *)(STACK_BASE_ADDR - total), total, PROT_READ | PROT_WRITE,
+           MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE, -1, 0);
   if (base == MAP_FAILED) {
     perror("mmap sandbox stack");
     exit(1);
   }
   // Protect the bottom page as guard
-  if (mprotect(base, STACK_GUARD_PAGES * ps, PROT_NONE) != 0) {
+  if (mprotect(base, STACK_GUARD_PAGES * page_size, PROT_NONE) != 0) {
     perror("mprotect guard");
     exit(1);
   }
