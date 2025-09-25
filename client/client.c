@@ -96,49 +96,46 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
     // unmap using munmap
     unmap_all_regions();  // unmap g_regions
 
+    bool had_seg_fault = false;
     int jump_rc = sigsetjmp(jump_buffer, 1);
+
     if (jump_rc == 0) {
       arm_timeout_timer();
       run_sandbox(sandbox_ptr);
       disarm_timeout_timer();
-      continue;  // no faults raised
+
     } else {
       disarm_timeout_timer();
-
-      if (jump_rc == 1 || jump_rc == 4 || jump_rc == 5) {
-        // 1. non SIGSEGV fault raised
-        // 4. SIGSEGV fault in sandbox memory
-        // 5. timer timeout: sandbox stuck
-        continue;
+      if (jump_rc == 2) {
+        had_seg_fault = true;
       }
     }
-    // SIGSEGV if code reaches here
-    run_until_quiet(0x00);
-    report_diffs(0x00);
 
-    // log_append("Mapped regions:\n");
-    // for (size_t i = 0; i < g_regions_len; i++)
-    // {
-    //     log_append("region %zu: addr=%p, len=%zu\n", i,
-    //     g_regions[i].addr, g_regions[i].len);
-    // }
+    if (had_seg_fault) {
+      // SIGSEGV if code reaches here
+      run_until_quiet(0x00);
+      report_diffs(0x00);
 
-    prepare_sandbox(sandbox_ptr);
-    instrs[0] = instructions[i];
+      // log_append("Mapped regions:\n");
+      // for (size_t i = 0; i < g_regions_len; i++)
+      // {
+      //     log_append("region %zu: addr=%p, len=%zu\n", i,
+      //     g_regions[i].addr, g_regions[i].len);
+      // }
 
-    inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+      prepare_sandbox(sandbox_ptr);
+      instrs[0] = instructions[i];
 
-    fill_all_pages(0xFF);
-    run_until_quiet(0xFF);
-    report_diffs(0xFF);
+      inject_instructions(sandbox_ptr, instrs,
+                          sizeof(instrs) / sizeof(uint32_t));
 
-    // printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
-    //        g_regions_len, g_diffs_cap, g_diffs_len);
-    // fflush(stdout);
-    if (xreg_init_data == NULL || xreg_output_data == NULL) {
-      log_append("WARNING: xreg pointers NULL; skipping print_xreg_changes\n");
-    } else {
-      print_xreg_changes();
+      fill_all_pages(0xFF);
+      run_until_quiet(0xFF);
+      report_diffs(0xFF);
+
+      // printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
+      //        g_regions_len, g_diffs_cap, g_diffs_len);
+      // fflush(stdout);
     }
 
     print_xreg_changes();
