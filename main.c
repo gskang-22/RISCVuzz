@@ -23,8 +23,10 @@ void set_up_tcp();
 #define SERVER_PORT 9000
 #define LOG_BUF_SIZE 4096
 
-#define TESTING
-#define DEBUG_MODE
+#define CLIENT_NAME "beagle"
+
+// #define TESTING
+// #define DEBUG_MODE
 
 int sock;
 char log_buffer[LOG_BUF_SIZE];
@@ -57,7 +59,7 @@ int main() {
   set_up_tcp();
 
   // send client name for identification
-  const char *name = "beagle";
+  const char *name = CLIENT_NAME;
   uint32_t len = htonl(strlen(name));
   write_n(sock, &len, sizeof(len));   // send length
   write_n(sock, name, strlen(name));  // send name

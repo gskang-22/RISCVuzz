@@ -77,18 +77,10 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
 
   // === Save floating-point registers if available ===
   union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
-  // Check if FP state is valid (might need a different check than NULL)
-  if (uc->uc_mcontext.__fpregs.__d.__f[0] !=
-      0) {  // or some other appropriate check
-    for (int i = 0; i < 32; i++) {
-      freg_output_data[i] = fpstate->__d.__f[i];
-    }
-
-    fcsr_output_data = fpstate->__d.__fcsr;
-  } else {
-    memset(freg_output_data, 0, sizeof(uint64_t) * 32);
-    fcsr_output_data = 0;
+  for (int i = 0; i < 32; i++) {
+    freg_output_data[i] = fpstate->__d.__f[i];
   }
+  fcsr_output_data = fpstate->__d.__fcsr;
 
   switch (signo) {
     case SIGILL:
