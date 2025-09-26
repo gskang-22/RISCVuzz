@@ -1,0 +1,166 @@
+Client connected: beagle
+instr_index: 5
+[DEBUG] Expecting 4095 bytes from beagle
+[DEBUG] Actually got 4095 bytes
+[DEBUG] Expecting 4095 bytes from beagle
+[DEBUG] Actually got 4095 bytes
+[ERROR] Responses differ for client beagle on batch starting at index 0
+Instruction set 1:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x02119233 =======
+x1 (ra) changed: 0xf045bfd112f01034 -> 0xb8ee4e5cd912e6b9
+x4 (tp) changed: 0x00000000000f0005 -> 0x02985f6ba26b8cec
+f2   changed: 0x74b3977385b267fd -> 0x4fbe0faa85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0x56427462cafdea73
+f4   changed: 0x0000000000000001 -> 0x6d167a1000000001
+f5   changed: 0x489e03954350cb80 -> 0x315c218c4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xd3914f99de5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0x88f73b875b08a7be
+f8   changed: 0xffffffff80000003 -> 0xa5fcdc0d80000003
+f10  changed: 0x0da567778ba48f39 -> 0x93a6c7858ba48f39
+f13  changed: 0x0000000000000000 -> 0x908ced9100000000
+f14  changed: 0x0000000000000000 -> 0x85da754e00000000
+f15  changed: 0x0800000000000006 -> 0x4031c26900000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xe2573699f8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0x0d5dc0aa96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0x6453a1ed07a253b6
+f22  changed: 0xffffffffffffffff -> 0xca16826fffffffff
+f25  changed: 0x0000000000000000 -> 0x351d1cfc00000000
+f29  changed: 0xffffffff80000008 -> 0x988015ed80000008
+f30  changed: 0xffffffffffff8008 -> 0x7372bb02ffff8008
+======= Running fuzz 1: 0x7ffbe793 =======
+x1 (ra) changed: 0xf045bfd112f01034 -> 0xb8ee4e5cd912e6b9
+x15 (a5) changed: 0xffffffff80000000 -> 0xffffffffffffffff
+f2   changed: 0x74b3977385b267fd -> 0x4fbe0faa85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0x56427462cafdea73
+f4   changed: 0x0000000000000001 -> 0x6d167a1000000001
+f5   changed: 0x489e03954350cb80 -> 0x315c218c4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xd3914f99de5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0x88f73b875b08a7be
+f8   changed: 0xffffffff80000003 -> 0xa5fcdc0d80000003
+f10  changed: 0x0da567778ba48f39 -> 0x93a6c7858ba48f39
+f13  changed: 0x0000000000000000 -> 0x908ced9100000000
+f14  changed: 0x0000000000000000 -> 0x85da754e00000000
+f15  changed: 0x0800000000000006 -> 0x4031c26900000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xe2573699f8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0x0d5dc0aa96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0x6453a1ed07a253b6
+f22  changed: 0xffffffffffffffff -> 0xca16826fffffffff
+f25  changed: 0x0000000000000000 -> 0x351d1cfc00000000
+f29  changed: 0xffffffff80000008 -> 0x988015ed80000008
+f30  changed: 0xffffffffffff8008 -> 0x7372bb02ffff8008
+======= Running fuzz 2: 0x38c45787 =======
+Caught signal 4: Illegal instruction
+x0 (zero) changed: 0x0000000000000000 -> 0x0000001000010020
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   changed: 0x0000000000000001 -> 0xffffffff00000001
+f5   changed: 0x489e03954350cb80 -> 0xffffffff4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xffffffffde5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0xffffffff5b08a7be
+f10  changed: 0x0da567778ba48f39 -> 0xffffffff8ba48f39
+f13  changed: 0x0000000000000000 -> 0xffffffff00000000
+f14  changed: 0x0000000000000000 -> 0xffffffff00000000
+f15  changed: 0x0800000000000006 -> 0xffffffff00000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xfffffffff8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0xffffffff96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0xffffffff07a253b6
+f25  changed: 0x0000000000000000 -> 0xffffffff00000000
+======= Running fuzz 3: 0x2a2b84d3 =======
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   changed: 0x0000000000000001 -> 0xffffffff00000001
+f5   changed: 0x489e03954350cb80 -> 0xffffffff4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xffffffffde5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0xffffffff5b08a7be
+f9   changed: 0xc4f37893da038603 -> 0x7ff8000000000000
+f10  changed: 0x0da567778ba48f39 -> 0xffffffff8ba48f39
+f13  changed: 0x0000000000000000 -> 0xffffffff00000000
+f14  changed: 0x0000000000000000 -> 0xffffffff00000000
+f15  changed: 0x0800000000000006 -> 0xffffffff00000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xfffffffff8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0xffffffff96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0xffffffff07a253b6
+f25  changed: 0x0000000000000000 -> 0xffffffff0
+Instruction set 2:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x02119233 =======
+x4 (tp) changed: 0x00000000000f0005 -> 0x02985f6ba26b8cec
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   changed: 0x0000000000000001 -> 0xffffffff00000001
+f5   changed: 0x489e03954350cb80 -> 0xffffffff4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xffffffffde5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0xffffffff5b08a7be
+f10  changed: 0x0da567778ba48f39 -> 0xffffffff8ba48f39
+f13  changed: 0x0000000000000000 -> 0xffffffff00000000
+f14  changed: 0x0000000000000000 -> 0xffffffff00000000
+f15  changed: 0x0800000000000006 -> 0xffffffff00000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xfffffffff8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0xffffffff96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0xffffffff07a253b6
+f25  changed: 0x0000000000000000 -> 0xffffffff00000000
+======= Running fuzz 1: 0x7ffbe793 =======
+x15 (a5) changed: 0xffffffff80000000 -> 0xffffffffffffffff
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   changed: 0x0000000000000001 -> 0xffffffff00000001
+f5   changed: 0x489e03954350cb80 -> 0xffffffff4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xffffffffde5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0xffffffff5b08a7be
+f10  changed: 0x0da567778ba48f39 -> 0xffffffff8ba48f39
+f13  changed: 0x0000000000000000 -> 0xffffffff00000000
+f14  changed: 0x0000000000000000 -> 0xffffffff00000000
+f15  changed: 0x0800000000000006 -> 0xffffffff00000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xfffffffff8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0xffffffff96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0xffffffff07a253b6
+f25  changed: 0x0000000000000000 -> 0xffffffff00000000
+======= Running fuzz 2: 0x38c45787 =======
+Caught signal 4: Illegal instruction
+x0 (zero) changed: 0x0000000000000000 -> 0x0000001000010020
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   changed: 0x0000000000000001 -> 0xffffffff00000001
+f5   changed: 0x489e03954350cb80 -> 0xffffffff4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xffffffffde5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0xffffffff5b08a7be
+f10  changed: 0x0da567778ba48f39 -> 0xffffffff8ba48f39
+f13  changed: 0x0000000000000000 -> 0xffffffff00000000
+f14  changed: 0x0000000000000000 -> 0xffffffff00000000
+f15  changed: 0x0800000000000006 -> 0xffffffff00000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xfffffffff8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0xffffffff96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0xffffffff07a253b6
+f25  changed: 0x0000000000000000 -> 0xffffffff00000000
+======= Running fuzz 3: 0x2a2b84d3 =======
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   changed: 0x0000000000000001 -> 0xffffffff00000001
+f5   changed: 0x489e03954350cb80 -> 0xffffffff4350cb80
+f6   changed: 0xb8912e1ade5ff3cd -> 0xffffffffde5ff3cd
+f7   changed: 0x27ca1d145b08a7be -> 0xffffffff5b08a7be
+f9   changed: 0xc4f37893da038603 -> 0x7ff8000000000000
+f10  changed: 0x0da567778ba48f39 -> 0xffffffff8ba48f39
+f13  changed: 0x0000000000000000 -> 0xffffffff00000000
+f14  changed: 0x0000000000000000 -> 0xffffffff00000000
+f15  changed: 0x0800000000000006 -> 0xffffffff00000006
+f16  changed: 0x0c6cd25bf8dd32a5 -> 0xfffffffff8dd32a5
+f17  changed: 0x7fe92f0d96e9cb5a -> 0xffffffff96e9cb5a
+f20  changed: 0xc29b73b407a253b6 -> 0xffffffff07a253b6
+f25  changed: 0x0000000000000000 -> 0xffffffff00000000
+======= Running fuzz 4: 0xc100352f =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+map_two_pages: refusing to map at NULL base
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+Caught SIGSEGV (Segmentation Fault)
+map_two_pages: refusing to map at NULL base
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+x0 (zero) changed: 0x0000000000000000 -> 0x0000001000010020
+f2   changed: 0x74b3977385b267fd -> 0xffffffff85b267fd
+f3   changed: 0xb8092bb3cafdea73 -> 0xffffffffcafdea73
+f4   chan
+Diff between runs:

@@ -135,27 +135,42 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
   }
 }
 
+struct sigaction old_sa_ill, old_sa_segv, old_sa_bus, old_sa_fpe, old_sa_trap,
+    old_sa_alrm;
+stack_t old_ss;
+
 // Setup signal handlers
 void setup_signal_handlers() {
-  // install alt stack (to allow clobbering of sp)
-  stack_t ss;
-  ss.ss_sp = alt_stack;
-  ss.ss_size = sizeof(alt_stack);
-  ss.ss_flags = 0;
+  // save/replace sigaltstack
+  sigaltstack(NULL, &old_ss);
+  stack_t ss = {
+      .ss_sp = alt_stack, .ss_size = sizeof(alt_stack), .ss_flags = 0};
   sigaltstack(&ss, NULL);
 
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
   sa.sa_sigaction = (void *)signal_trampoline;
   sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
-
   sigemptyset(&sa.sa_mask);
+
   sigaction(SIGILL, &sa, NULL);
   sigaction(SIGSEGV, &sa, NULL);
   sigaction(SIGBUS, &sa, NULL);
   sigaction(SIGFPE, &sa, NULL);
   sigaction(SIGTRAP, &sa, NULL);
   sigaction(SIGALRM, &sa, NULL);
+}
+
+void restore_signal_handlers() {
+  sigaction(SIGILL, &old_sa_ill, NULL);
+  sigaction(SIGSEGV, &old_sa_segv, NULL);
+  sigaction(SIGBUS, &old_sa_bus, NULL);
+  sigaction(SIGFPE, &old_sa_fpe, NULL);
+  sigaction(SIGTRAP, &old_sa_trap, NULL);
+  sigaction(SIGALRM, &old_sa_alrm, NULL);
+
+  // restore altstack
+  if (sigaltstack(&old_ss, NULL) != 0) perror("sigaltstack restore");
 }
 
 // allocates a memory buffer to write to and execute

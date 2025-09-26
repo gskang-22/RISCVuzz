@@ -23,8 +23,8 @@ void set_up_tcp();
 #define SERVER_PORT 9000
 #define LOG_BUF_SIZE 4096
 
-#define TESTING
-#define DEBUG_MODE
+// #define TESTING
+// #define DEBUG_MODE
 
 int sock;
 char log_buffer[LOG_BUF_SIZE];

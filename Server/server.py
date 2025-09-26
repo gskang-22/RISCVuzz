@@ -6,18 +6,16 @@ import difflib
 TESTING = True
 
 instructions = [
-0x00dd31af,
-0x77bfb957, 
-
-#  0x654fa0d7, 
-#  0x01db52b3, 
-#  0xc415a057, 
-#  0xbf705957, 
-#  0x01b920a7, 
-#  0x6e6dda27, 
-#  0xadfde4d7, 
-#  0x00246233, 
-#  0x28cb5857, 
+0x7ffbe793, 
+0x38c45787, 
+0x02119233,
+0x2a2b84d3, 
+0xc100352f, 
+0xcdf3e5d7, 
+0x138d5957, 
+0x6a80afd7, 
+0x976fc6d7, 
+0x02bf8787
 ]
 
 clients = {}  # name -> writer
@@ -153,7 +151,7 @@ async def handle_client(reader, writer, instructions, cfg):
                 )
                 print(''.join(diff))  # print the diff
             else:
-                # print(f"{name}: responses are the same")
+                print(f"{name}: responses are the same")
                 print(response1)
 
         print(f"All instructions sent to {name}")
