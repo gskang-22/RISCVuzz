@@ -185,13 +185,13 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
   if (g_regions_len >= MAX_MAPPED_PAGES) return;
 
   if (base == NULL) {
-    log_append("map_two_pages: refusing to map at NULL base\n");
+    // log_append("map_two_pages: refusing to map at NULL base\n");
     siglongjmp(jump_buffer, 4);
   }
 
   /* avoid mapping very low addresses (NULL page) */
   if ((uintptr_t)base < (uintptr_t)page_size) {
-    log_append("map_two_pages: refusing to map at low address %p\n", base);
+    // log_append("map_two_pages: refusing to map at low address %p\n", base);
     siglongjmp(jump_buffer, 4);
   }
 
@@ -202,7 +202,7 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
       mmap(base, 2 * page_size, PROT_READ | PROT_WRITE,
            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,  // MAP_FIXED
            -1, 0);
-  log_append("mapping: %p\n", r);
+  // log_append("mapping: %p\n", r);
   if (r == MAP_FAILED) {
     int e = errno;
     log_append("mmap failed (requested %p): errno=%d (%s)\n", base, e,
@@ -212,8 +212,8 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
     siglongjmp(jump_buffer, 4);  // abort / skip this test case
   }
 
-  log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
-             (unsigned long)(uintptr_t)base, (unsigned long)(uintptr_t)r);
+  // log_append("Requested base: 0x%016lx, mapped at: 0x%016lx\n",
+  //  (unsigned long)(uintptr_t)base, (unsigned long)(uintptr_t)r);
 
   /* Store the actual returned address (r), not the requested base */
   if (g_regions_len < MAX_MAPPED_PAGES) {
@@ -248,7 +248,7 @@ static void report_diffs(uint8_t expected) {
 
   /* sanity checks */
   if (g_regions == NULL) {
-    log_append("report_diffs_safe: no g_regions\n");
+    // log_append("report_diffs_safe: no g_regions\n");
     return;
   }
 
@@ -257,7 +257,7 @@ static void report_diffs(uint8_t expected) {
     size_t len = g_regions[i].len;
 
     if (base == NULL || len == 0) {
-      printf("Skipping invalid region %zu\n", i);
+      // printf("Skipping invalid region %zu\n", i);
       fflush(stdout);
       continue;
     }

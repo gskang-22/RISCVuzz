@@ -263,8 +263,7 @@ void print_xreg_changes(void) {
       continue;
 
     if (xreg_init_data[i] != xreg_output_data[i]) {
-      log_append("%-4s changed: 0x%016lx -> 0x%016lx\n", reg_names[i],
-                 xreg_init_data[i], xreg_output_data[i]);
+      log_append("%-4s:-> 0x%016lx\n", reg_names[i], xreg_output_data[i]);
     }
   }
 }
@@ -272,8 +271,7 @@ void print_xreg_changes(void) {
 void print_freg_changes(void) {
   for (int i = 0; i < 32; i++) {
     if (freg_init_data[i] != freg_output_data[i]) {
-      log_append("f%-3d changed: 0x%016lx -> 0x%016lx\n", i, freg_init_data[i],
-                 freg_output_data[i]);
+      log_append("f%-3d:-> 0x%016lx\n", i, freg_output_data[i]);
     }
   }
 }
