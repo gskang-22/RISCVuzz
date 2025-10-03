@@ -3,10 +3,11 @@ import asyncio
 from generate import generate_instructions
 import difflib
 
-TESTING = True
+TESTING = False
 
 instructions = [
-0x7ffbe793, 
+0x7ffbe793,
+0x00000013, 
 0x38c45787, 
 0x02119233,
 0x2a2b84d3, 
