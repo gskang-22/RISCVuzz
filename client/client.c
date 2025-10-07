@@ -76,76 +76,75 @@ uint32_t instrs[] = {
 };
 
 int run_client(uint32_t *instructions, size_t n_instructions) {
-  for (size_t i = 0; i < n_instructions; i++) {
-    unmap_vdso_vvar();
-    setup_signal_handlers();
-    void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
-    xreg_init_data[2] = (uint64_t)sandbox_sp;
+  // for (size_t i = 0; i < n_instructions; i++) {
+  unmap_vdso_vvar();
+  setup_signal_handlers();
+  void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
+  xreg_init_data[2] = (uint64_t)sandbox_sp;
 
-    log_append("======= Running fuzz %zu: 0x%08x =======\n", i,
-               instructions[i]);
+  // log_append("======= Running fuzz %zu: 0x%08x =======\n", i,
+  //            instructions[i]);
 
-    // prepare sandbox
-    prepare_sandbox(sandbox_ptr);
+  // prepare sandbox
+  prepare_sandbox(sandbox_ptr);
 
-    // instrs[0] = instructions[i];
-    for (int j = 0; j < sizeof(instructions) / sizeof(instructions[0]); j++) {
-      instrs[j] = instructions[j];
+  fill_instrs(instructions, n_instructions);
+  for (int i = 0; i < sizeof(instrs) / sizeof(instrs[0]); i++) {
+    printf("instrs[%d] = 0x%08x\n", i, instrs[i]);
+  }
+
+  inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
+
+  // unmap using munmap
+  unmap_all_regions();  // unmap g_regions
+
+  bool had_seg_fault = false;
+  int jump_rc = sigsetjmp(jump_buffer, 1);
+
+  if (jump_rc == 0) {
+    arm_timeout_timer();
+    run_sandbox(sandbox_ptr);
+    disarm_timeout_timer();
+
+  } else {
+    disarm_timeout_timer();
+    if (jump_rc == 2) {
+      had_seg_fault = true;
     }
+  }
+
+  if (had_seg_fault) {
+    // SIGSEGV if code reaches here
+    run_until_quiet(0x00);
+    report_diffs(0x00);
+
+    // log_append("Mapped regions:\n");
+    // for (size_t i = 0; i < g_regions_len; i++)
+    // {
+    //     log_append("region %zu: addr=%p, len=%zu\n", i,
+    //     g_regions[i].addr, g_regions[i].len);
+    // }
+
+    prepare_sandbox(sandbox_ptr);
+    fill_instrs(instructions, n_instructions);
 
     inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
-    // unmap using munmap
-    unmap_all_regions();  // unmap g_regions
+    fill_all_pages(0xFF);
+    run_until_quiet(0xFF);
+    report_diffs(0xFF);
 
-    bool had_seg_fault = false;
-    int jump_rc = sigsetjmp(jump_buffer, 1);
-
-    if (jump_rc == 0) {
-      arm_timeout_timer();
-      run_sandbox(sandbox_ptr);
-      disarm_timeout_timer();
-
-    } else {
-      disarm_timeout_timer();
-      if (jump_rc == 2) {
-        had_seg_fault = true;
-      }
-    }
-
-    if (had_seg_fault) {
-      // SIGSEGV if code reaches here
-      run_until_quiet(0x00);
-      report_diffs(0x00);
-
-      // log_append("Mapped regions:\n");
-      // for (size_t i = 0; i < g_regions_len; i++)
-      // {
-      //     log_append("region %zu: addr=%p, len=%zu\n", i,
-      //     g_regions[i].addr, g_regions[i].len);
-      // }
-
-      prepare_sandbox(sandbox_ptr);
-      instrs[0] = instructions[i];
-
-      inject_instructions(sandbox_ptr, instrs,
-                          sizeof(instrs) / sizeof(uint32_t));
-
-      fill_all_pages(0xFF);
-      run_until_quiet(0xFF);
-      report_diffs(0xFF);
-
-      // printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
-      //        g_regions_len, g_diffs_cap, g_diffs_len);
-      // fflush(stdout);
-    }
-
-    print_xreg_changes();
-    print_freg_changes();
-
-    free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
-    restore_signal_handlers();
+    // printf("DEBUG: g_regions_len=%zu g_diffs_cap=%zu g_diffs_len=%zu\n",
+    //        g_regions_len, g_diffs_cap, g_diffs_len);
+    // fflush(stdout);
   }
+
+  print_xreg_changes();
+  print_freg_changes();
+
+  free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
+  restore_signal_handlers();
+  //}
   return 0;
 }
 
@@ -435,4 +434,18 @@ void arm_timeout_timer(void) {
 void disarm_timeout_timer(void) {
   struct itimerval timer = {0};
   setitimer(ITIMER_REAL, &timer, NULL);
+}
+
+void fill_instrs(uint32_t *instructions, size_t n_instructions) {
+  size_t instrs_len = sizeof(instrs) / sizeof(instrs[0]);
+
+  // don’t touch the last slot (jalr)
+  size_t writable = instrs_len - 1;
+
+  // copy only as many as instructions has, capped at writable space
+  size_t to_copy = (n_instructions < writable) ? n_instructions : writable;
+
+  for (size_t i = 0; i < to_copy; i++) {
+    instrs[i] = instructions[i];
+  }
 }

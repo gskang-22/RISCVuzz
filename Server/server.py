@@ -6,8 +6,9 @@ import difflib
 TESTING = True
 
 instructions = [
-0x060fa0d7, 0x0301000b
-
+0x00007057,
+0x5e054057,
+0x10028027,
 ]
 
 clients = {}  # name -> writer
@@ -95,7 +96,7 @@ async def handle_client(reader, writer, instructions, cfg):
     await log(f"Client connected: {name}")
 
     # wait until both clients are connected
-    if "beagle" in clients:
+    if "beagle" and "lichee" in clients:
         await run_batches(instructions, cfg)
 
 async def run_batches(instructions, cfg):
@@ -132,8 +133,8 @@ async def run_batches(instructions, cfg):
         # Wait for results before sending next batch
         results = {}
         # for name, (reader, writer) in clients.items():
-            # run1 = await read_results(reader, name)
-            # run2 = await read_results(reader, name)
+        #     run1 = await read_results(reader, name)
+        #     run2 = await read_results(reader, name)
         for name in clients:
             run1 = run1_results[name]
             run2 = run2_results[name]
@@ -198,6 +199,9 @@ async def run_batches(instructions, cfg):
         await log(f"Client {name} disconnected")
 
 async def main():
+    # Clear the log file at startup
+    open("/home/szekang/Documents/RISCVuzz/console.log", "w").close()
+
     # open config file
     cfg = read_cfg("/home/szekang/Documents/RISCVuzz/Server/config.cfg")
 

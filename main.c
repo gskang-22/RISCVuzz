@@ -24,6 +24,7 @@ void set_up_tcp();
 #define LOG_BUF_SIZE 4096
 
 #define CLIENT_NAME "beagle"
+// #define CLIENT_NAME "lichee"
 
 // #define TESTING
 // #define DEBUG_MODE
