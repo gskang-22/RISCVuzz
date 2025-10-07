@@ -88,15 +88,8 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
 
   // prepare sandbox
   prepare_sandbox(sandbox_ptr);
-
   fill_instrs(instructions, n_instructions);
-  for (int i = 0; i < sizeof(instrs) / sizeof(instrs[0]); i++) {
-    printf("instrs[%d] = 0x%08x\n", i, instrs[i]);
-  }
-
   inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
-
-  // unmap using munmap
   unmap_all_regions();  // unmap g_regions
 
   bool had_seg_fault = false;
@@ -157,7 +150,6 @@ static void run_until_quiet(int8_t fill_byte) {
   while (1) {
     if (++retries > MAX_RETRIES) {
       log_append("ERROR: Max retries exceeded, aborting run_until_quiet\n");
-      // fflush(stdout);
       break;
     }
 

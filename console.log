@@ -1,2 +1,336 @@
-['0x00007057', '0x5e054057', '0x10028027']
+['0xbdc0df87', '0x03fe1133', '0x5300df87', '0x2800dfa7', '0x8b509fd7', '0x4580e807', '0x00085103', '0x1d504fd7', '0x480095d7', '0x615fbfd7', '0x1400920b', '0x4852a057', '0x80080113', '0x224a1a53', '0x5850d20b', '0x9fdfd057', '0xad5e0fd7', '0x0017b083', '0x5d5e0fd7', '0xc1f0f02f', '0x0287e307', '0x2200ffa7', '0xfff0541b', '0x02025a33', '0x9dc0ef87', '0xc5506fd7', '0xa690ebd7', '0xe6908067', '0x03008f87', '0xd95e1fd7', '0x4e1816d7', '0x8fd0cfd7', '0xc2008f87', '0x4200ffa7', '0x2df0daa7', '0xaf5038d7', '0x9800ef87', '0x9c9000d7', '0x25306057', '0x0252000b', '0x3300ef87', '0x3dc08f87', '0x7d5e5fd7', '0x028c0007', '0xc000c20b', '0x955e0fd7', '0x85c0ef8b', '0x41a90133', '0x1850c20b', '0x85c0ef8b']
 Server listening on ('0.0.0.0', 9000)
+Client connected: beagle
+Client connected: lichee
+instr_index: 3
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 6
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 9
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+Caught SIGSEGV (Segmentation Fault)
+mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+Caught SIGSEGV (Segmentation Fault)
+mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+Caught SIGSEGV (Segmentation Fault)
+mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
+non-recoverable jump_rc=4, exiting loop
+run_until_quiet finished
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 12
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 15
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
+x0 (zero):-> 0x0000001000010028
+x2 (sp):-> 0xe15d72430a808501
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
+x0 (zero):-> 0x0000001000010028
+x2 (sp):-> 0xe15d72430a808501
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
+x0 (zero):-> 0x0000001000010028
+x2 (sp):-> 0xe15d72430a808501
+
+instr_index: 18
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 21
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 24
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 27
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 30
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+[jump] PC escaped sandbox: 0xffffffd112f00e9c
+x0 (zero):-> 0xffffffd112f00e9c
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+[jump] PC escaped sandbox: 0xffffffd112f00e9c
+x0 (zero):-> 0xffffffd112f00e9c
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+[jump] PC escaped sandbox: 0xffffffd112f00e9c
+x0 (zero):-> 0xffffffd112f00e9c
+
+instr_index: 33
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 36
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 39
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 42
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+Caught signal 4: Illegal instruction
+non-recoverable jump_rc=1, exiting loop
+run_until_quiet finished
+Caught signal 4: Illegal instruction
+non-recoverable jump_rc=1, exiting loop
+run_until_quiet finished
+x0 (zero):-> 0x0000001000010024
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+Caught signal 4: Illegal instruction
+non-recoverable jump_rc=1, exiting loop
+run_until_quiet finished
+Caught signal 4: Illegal instruction
+non-recoverable jump_rc=1, exiting loop
+run_until_quiet finished
+x0 (zero):-> 0x0000001000010024
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+Caught signal 4: Illegal instruction
+non-recoverable jump_rc=1, exiting loop
+run_until_quiet finished
+Caught signal 4: Illegal instruction
+non-recoverable jump_rc=1, exiting loop
+run_until_quiet finished
+x0 (zero):-> 0x0000001000010024
+
+instr_index: 45
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 48
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+
+instr_index: 50
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
+x0 (zero):-> 0x0000001000010020
+
+[OK] lichee results are internally consistent
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
+x0 (zero):-> 0x0000001000010020
+
+[OK] Both clients produced identical results
+sandbox ptr: 0x1000010000
+Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
+x0 (zero):-> 0x0000001000010020
+
+All instructions sent
+Client beagle disconnected
+Client lichee disconnected

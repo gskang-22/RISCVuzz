@@ -3,7 +3,8 @@ import asyncio
 from generate import generate_instructions
 import difflib
 
-TESTING = True
+TESTING = False
+DEBUG = False
 
 instructions = [
 0x00007057,
@@ -76,9 +77,10 @@ async def read_results(reader, name):
         data = await reader.readexactly(msg_len)
         # Step 3: decode and print
         message = data.decode(errors="replace")  # safe decode
-
-        await log(f"[DEBUG] Expecting {msg_len} bytes from {name}")
-        await log(f"[DEBUG] Actually got {len(data)} bytes")
+        
+        if DEBUG == True:
+            await log(f"[DEBUG] Expecting {msg_len} bytes from {name}")
+            await log(f"[DEBUG] Actually got {len(data)} bytes")
 
         return message
     except asyncio.IncompleteReadError:

@@ -272,7 +272,8 @@ void unmap_vdso_vvar() {
 }
 
 void print_xreg_changes(void) {
-  for (int i = 0; i < 32; i++) {
+  // skip x0 since it is hardwired to 0
+  for (int i = 1; i < 32; i++) {
     if (i == 9)  // skip x9 as it is used for storing the return jump pointer
                  // out of sandbox
       continue;
