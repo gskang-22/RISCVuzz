@@ -67,29 +67,32 @@ static size_t g_diffs_cap = 0;
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[] = {
     0x00000013,  // nop to be replaced
+    0x00000013,  // nop to be replaced
+    0x00000013,  // nop to be replaced
+    0x00000013,  // nop to be replaced
+    0x00000013,  // nop to be replaced
 
     0x00048067  // jalr x0, 0(x9)
 };
 
 int run_client(uint32_t *instructions, size_t n_instructions) {
-  // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
   for (size_t i = 0; i < n_instructions; i++) {
     unmap_vdso_vvar();
     setup_signal_handlers();
     void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
     xreg_init_data[2] = (uint64_t)sandbox_sp;
 
-    // uint8_t sandbox_stack[SANDBOX_STACK_SIZE];
-    // void *sandbox_sp = sandbox_stack + SANDBOX_STACK_SIZE;
-    // xreg_init_data[2] = (uint64_t)sandbox_sp;
-
     log_append("======= Running fuzz %zu: 0x%08x =======\n", i,
                instructions[i]);
 
     // prepare sandbox
     prepare_sandbox(sandbox_ptr);
-    // instrs[0] = fuzz_buffer[i];
-    instrs[0] = instructions[i];
+
+    // instrs[0] = instructions[i];
+    for (int j = 0; j < sizeof(instructions) / sizeof(instructions[0]); j++) {
+      instrs[j] = instructions[j];
+    }
+
     inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
 
     // unmap using munmap
