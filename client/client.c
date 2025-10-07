@@ -35,6 +35,7 @@ void *alloc_sandbox_stack(size_t stack_size);
 void free_sandbox_stack(void *stack_top, size_t stack_size);
 void arm_timeout_timer(void);
 void disarm_timeout_timer(void);
+void fill_instrs(uint32_t *instructions, size_t n_instructions);
 int run_client(uint32_t *instructions, size_t n_instructions);
 
 // extern variables
