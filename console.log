@@ -3441,3 +3441,1066 @@ f25  changed: 0x0000000000000000 -> 0xffffffff00000000
 
 All instructions sent
 Client beagle disconnected
+Client connected: beagle
+instr_index: 2
+[DEBUG] Expecting 1158 bytes from beagle
+[DEBUG] Actually got 1158 bytes
+[DEBUG] Expecting 1050 bytes from beagle
+[DEBUG] Actually got 1050 bytes
+[ERROR] Responses differ for client beagle on batch starting at index 0
+Instruction set 1:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0x4fbe0faa85b267fd
+f3  :-> 0x56427462cafdea73
+f4  :-> 0x6d167a1000000001
+f5  :-> 0x315c218c4350cb80
+f6  :-> 0xd3914f99de5ff3cd
+f7  :-> 0x88f73b875b08a7be
+f8  :-> 0xa5fcdc0d80000003
+f10 :-> 0x93a6c7858ba48f39
+f13 :-> 0x908ced9100000000
+f14 :-> 0x85da754e00000000
+f15 :-> 0x4031c26900000006
+f16 :-> 0xe2573699f8dd32a5
+f17 :-> 0x0d5dc0aa96e9cb5a
+f20 :-> 0x6453a1ed07a253b6
+f22 :-> 0xca16826fffffffff
+f25 :-> 0x351d1cfc00000000
+f29 :-> 0x988015ed80000008
+f30 :-> 0x7372bb02ffff8008
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+Instruction set 2:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+Diff between runs:
+--- beagle-run1
++++ beagle-run2
+@@ -1,24 +1,20 @@
+ sandbox ptr: 0x1000010000
+ ======= Running fuzz 0: 0x060fa0d7 =======
+ x1 (ra):-> 0x0000002000000000
+-f2  :-> 0x4fbe0faa85b267fd
+-f3  :-> 0x56427462cafdea73
+-f4  :-> 0x6d167a1000000001
+-f5  :-> 0x315c218c4350cb80
+-f6  :-> 0xd3914f99de5ff3cd
+-f7  :-> 0x88f73b875b08a7be
+-f8  :-> 0xa5fcdc0d80000003
+-f10 :-> 0x93a6c7858ba48f39
+-f13 :-> 0x908ced9100000000
+-f14 :-> 0x85da754e00000000
+-f15 :-> 0x4031c26900000006
+-f16 :-> 0xe2573699f8dd32a5
+-f17 :-> 0x0d5dc0aa96e9cb5a
+-f20 :-> 0x6453a1ed07a253b6
+-f22 :-> 0xca16826fffffffff
+-f25 :-> 0x351d1cfc00000000
+-f29 :-> 0x988015ed80000008
+-f30 :-> 0x7372bb02ffff8008
++f2  :-> 0xffffffff85b267fd
++f3  :-> 0xffffffffcafdea73
++f4  :-> 0xffffffff00000001
++f5  :-> 0xffffffff4350cb80
++f6  :-> 0xffffffffde5ff3cd
++f7  :-> 0xffffffff5b08a7be
++f10 :-> 0xffffffff8ba48f39
++f13 :-> 0xffffffff00000000
++f14 :-> 0xffffffff00000000
++f15 :-> 0xffffffff00000006
++f16 :-> 0xfffffffff8dd32a5
++f17 :-> 0xffffffff96e9cb5a
++f20 :-> 0xffffffff07a253b6
++f25 :-> 0xffffffff00000000
+ ======= Running fuzz 1: 0x0301000b =======
+ Caught SIGSEGV (Segmentation Fault)
+ Caught SIGSEGV (Segmentation Fault)
+
+All instructions sent
+Client beagle disconnected
+['0xa4c153d7', '0x1ef06087', '0xaff780d7', '0x97a0e0d7', '0x63007087', '0x6fc8abd7', '0x6ef07087', '0x866980d7', '0xc3f7a0d7', '0x829fdfd7']
+Server listening on ('0.0.0.0', 9000)
+Client connected: beagle
+instr_index: 5
+[DEBUG] Expecting 2476 bytes from beagle
+[DEBUG] Actually got 2476 bytes
+[DEBUG] Expecting 2476 bytes from beagle
+[DEBUG] Actually got 2476 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0xa4c153d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x1ef06087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 2: 0xaff780d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 3: 0x97a0e0d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 4: 0x63007087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+instr_index: 10
+[DEBUG] Expecting 2437 bytes from beagle
+[DEBUG] Actually got 2437 bytes
+[DEBUG] Expecting 2437 bytes from beagle
+[DEBUG] Actually got 2437 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x6fc8abd7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x6ef07087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 2: 0x866980d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 3: 0xc3f7a0d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 4: 0x829fdfd7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+All instructions sent
+Client beagle disconnected
+Client connected: beagle
+instr_index: 5
+[DEBUG] Expecting 2476 bytes from beagle
+[DEBUG] Actually got 2476 bytes
+[DEBUG] Expecting 2476 bytes from beagle
+[DEBUG] Actually got 2476 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0xa4c153d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x1ef06087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 2: 0xaff780d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 3: 0x97a0e0d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 4: 0x63007087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+instr_index: 10
+[DEBUG] Expecting 2437 bytes from beagle
+[DEBUG] Actually got 2437 bytes
+[DEBUG] Expecting 2437 bytes from beagle
+[DEBUG] Actually got 2437 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x6fc8abd7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x6ef07087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 2: 0x866980d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 3: 0xc3f7a0d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 4: 0x829fdfd7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+All instructions sent
+Client beagle disconnected
+Client connected: beagle
+instr_index: 5
+[DEBUG] Expecting 2476 bytes from beagle
+[DEBUG] Actually got 2476 bytes
+[DEBUG] Expecting 2476 bytes from beagle
+[DEBUG] Actually got 2476 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0xa4c153d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x1ef06087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 2: 0xaff780d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 3: 0x97a0e0d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 4: 0x63007087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+instr_index: 10
+[DEBUG] Expecting 2437 bytes from beagle
+[DEBUG] Actually got 2437 bytes
+[DEBUG] Expecting 2437 bytes from beagle
+[DEBUG] Actually got 2437 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x6fc8abd7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x6ef07087 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 2: 0x866980d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 3: 0xc3f7a0d7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 4: 0x829fdfd7 =======
+Caught signal 4: Illegal instruction
+x0 (zero):-> 0x0000001000010020
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+All instructions sent
+Client beagle disconnected
+['0x060fa0d7', '0x0301000b']
+Server listening on ('0.0.0.0', 9000)
+Client connected: beagle
+instr_index: 2
+[DEBUG] Expecting 1158 bytes from beagle
+[DEBUG] Actually got 1158 bytes
+[DEBUG] Expecting 1050 bytes from beagle
+[DEBUG] Actually got 1050 bytes
+[ERROR] Responses differ for client beagle on batch starting at index 0
+Instruction set 1:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0x4fbe0faa85b267fd
+f3  :-> 0x56427462cafdea73
+f4  :-> 0x6d167a1000000001
+f5  :-> 0x315c218c4350cb80
+f6  :-> 0xd3914f99de5ff3cd
+f7  :-> 0x88f73b875b08a7be
+f8  :-> 0xa5fcdc0d80000003
+f10 :-> 0x93a6c7858ba48f39
+f13 :-> 0x908ced9100000000
+f14 :-> 0x85da754e00000000
+f15 :-> 0x4031c26900000006
+f16 :-> 0xe2573699f8dd32a5
+f17 :-> 0x0d5dc0aa96e9cb5a
+f20 :-> 0x6453a1ed07a253b6
+f22 :-> 0xca16826fffffffff
+f25 :-> 0x351d1cfc00000000
+f29 :-> 0x988015ed80000008
+f30 :-> 0x7372bb02ffff8008
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+Instruction set 2:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+Diff between runs:
+--- beagle-run1
++++ beagle-run2
+@@ -1,24 +1,20 @@
+ sandbox ptr: 0x1000010000
+ ======= Running fuzz 0: 0x060fa0d7 =======
+ x1 (ra):-> 0x0000002000000000
+-f2  :-> 0x4fbe0faa85b267fd
+-f3  :-> 0x56427462cafdea73
+-f4  :-> 0x6d167a1000000001
+-f5  :-> 0x315c218c4350cb80
+-f6  :-> 0xd3914f99de5ff3cd
+-f7  :-> 0x88f73b875b08a7be
+-f8  :-> 0xa5fcdc0d80000003
+-f10 :-> 0x93a6c7858ba48f39
+-f13 :-> 0x908ced9100000000
+-f14 :-> 0x85da754e00000000
+-f15 :-> 0x4031c26900000006
+-f16 :-> 0xe2573699f8dd32a5
+-f17 :-> 0x0d5dc0aa96e9cb5a
+-f20 :-> 0x6453a1ed07a253b6
+-f22 :-> 0xca16826fffffffff
+-f25 :-> 0x351d1cfc00000000
+-f29 :-> 0x988015ed80000008
+-f30 :-> 0x7372bb02ffff8008
++f2  :-> 0xffffffff85b267fd
++f3  :-> 0xffffffffcafdea73
++f4  :-> 0xffffffff00000001
++f5  :-> 0xffffffff4350cb80
++f6  :-> 0xffffffffde5ff3cd
++f7  :-> 0xffffffff5b08a7be
++f10 :-> 0xffffffff8ba48f39
++f13 :-> 0xffffffff00000000
++f14 :-> 0xffffffff00000000
++f15 :-> 0xffffffff00000006
++f16 :-> 0xfffffffff8dd32a5
++f17 :-> 0xffffffff96e9cb5a
++f20 :-> 0xffffffff07a253b6
++f25 :-> 0xffffffff00000000
+ ======= Running fuzz 1: 0x0301000b =======
+ Caught SIGSEGV (Segmentation Fault)
+ Caught SIGSEGV (Segmentation Fault)
+
+All instructions sent
+Client beagle disconnected
+['0x060fa0d7', '0x0301000b']
+Server listening on ('0.0.0.0', 9000)
+Client connected: beagle
+instr_index: 2
+[DEBUG] Expecting 1158 bytes from beagle
+[DEBUG] Actually got 1158 bytes
+[DEBUG] Expecting 1050 bytes from beagle
+[DEBUG] Actually got 1050 bytes
+[ERROR] Responses differ for client beagle on batch starting at index 0
+Instruction set 1:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f8  :-> 0xffffffff80000003
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f22 :-> 0xffffffffffffffff
+f25 :-> 0xffffffff00000000
+f29 :-> 0xffffffff80000008
+f30 :-> 0xffffffffffff8008
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+Instruction set 2:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  :-> 0xffffffff85b267fd
+f3  :-> 0xffffffffcafdea73
+f4  :-> 0xffffffff00000001
+f5  :-> 0xffffffff4350cb80
+f6  :-> 0xffffffffde5ff3cd
+f7  :-> 0xffffffff5b08a7be
+f10 :-> 0xffffffff8ba48f39
+f13 :-> 0xffffffff00000000
+f14 :-> 0xffffffff00000000
+f15 :-> 0xffffffff00000006
+f16 :-> 0xfffffffff8dd32a5
+f17 :-> 0xffffffff96e9cb5a
+f20 :-> 0xffffffff07a253b6
+f25 :-> 0xffffffff00000000
+
+Diff between runs:
+--- beagle-run1
++++ beagle-run2
+@@ -7,7 +7,6 @@
+ f5  :-> 0xffffffff4350cb80
+ f6  :-> 0xffffffffde5ff3cd
+ f7  :-> 0xffffffff5b08a7be
+-f8  :-> 0xffffffff80000003
+ f10 :-> 0xffffffff8ba48f39
+ f13 :-> 0xffffffff00000000
+ f14 :-> 0xffffffff00000000
+@@ -15,10 +14,7 @@
+ f16 :-> 0xfffffffff8dd32a5
+ f17 :-> 0xffffffff96e9cb5a
+ f20 :-> 0xffffffff07a253b6
+-f22 :-> 0xffffffffffffffff
+ f25 :-> 0xffffffff00000000
+-f29 :-> 0xffffffff80000008
+-f30 :-> 0xffffffffffff8008
+ ======= Running fuzz 1: 0x0301000b =======
+ Caught SIGSEGV (Segmentation Fault)
+ Caught SIGSEGV (Segmentation Fault)
+
+All instructions sent
+Client beagle disconnected
+Client connected: beagle
+instr_index: 2
+[DEBUG] Expecting 1798 bytes from beagle
+[DEBUG] Actually got 1798 bytes
+[DEBUG] Expecting 1610 bytes from beagle
+[DEBUG] Actually got 1610 bytes
+[ERROR] Responses differ for client beagle on batch starting at index 0
+Instruction set 1:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  : 0xffffffff85b267fd -> 0xffffffff85b267fd
+f3  : 0xffffffffcafdea73 -> 0xffffffffcafdea73
+f4  : 0xffffffff00000001 -> 0xffffffff00000001
+f5  : 0xffffffff4350cb80 -> 0xffffffff4350cb80
+f6  : 0xffffffffde5ff3cd -> 0xffffffffde5ff3cd
+f7  : 0xffffffff5b08a7be -> 0xffffffff5b08a7be
+f8  : 0xffffffff80000003 -> 0xffffffff80000003
+f10 : 0xffffffff8ba48f39 -> 0xffffffff8ba48f39
+f13 : 0xffffffff00000000 -> 0xffffffff00000000
+f14 : 0xffffffff00000000 -> 0xffffffff00000000
+f15 : 0xffffffff00000006 -> 0xffffffff00000006
+f16 : 0xfffffffff8dd32a5 -> 0xfffffffff8dd32a5
+f17 : 0xffffffff96e9cb5a -> 0xffffffff96e9cb5a
+f20 : 0xffffffff07a253b6 -> 0xffffffff07a253b6
+f22 : 0xffffffffffffffff -> 0xffffffffffffffff
+f25 : 0xffffffff00000000 -> 0xffffffff00000000
+f29 : 0xffffffff80000008 -> 0xffffffff80000008
+f30 : 0xffffffffffff8008 -> 0xffffffffffff8008
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  : 0xffffffff85b267fd -> 0xffffffff85b267fd
+f3  : 0xffffffffcafdea73 -> 0xffffffffcafdea73
+f4  : 0xffffffff00000001 -> 0xffffffff00000001
+f5  : 0xffffffff4350cb80 -> 0xffffffff4350cb80
+f6  : 0xffffffffde5ff3cd -> 0xffffffffde5ff3cd
+f7  : 0xffffffff5b08a7be -> 0xffffffff5b08a7be
+f10 : 0xffffffff8ba48f39 -> 0xffffffff8ba48f39
+f13 : 0xffffffff00000000 -> 0xffffffff00000000
+f14 : 0xffffffff00000000 -> 0xffffffff00000000
+f15 : 0xffffffff00000006 -> 0xffffffff00000006
+f16 : 0xfffffffff8dd32a5 -> 0xfffffffff8dd32a5
+f17 : 0xffffffff96e9cb5a -> 0xffffffff96e9cb5a
+f20 : 0xffffffff07a253b6 -> 0xffffffff07a253b6
+f25 : 0xffffffff00000000 -> 0xffffffff00000000
+
+Instruction set 2:
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+f2  : 0xffffffff85b267fd -> 0xffffffff85b267fd
+f3  : 0xffffffffcafdea73 -> 0xffffffffcafdea73
+f4  : 0xffffffff00000001 -> 0xffffffff00000001
+f5  : 0xffffffff4350cb80 -> 0xffffffff4350cb80
+f6  : 0xffffffffde5ff3cd -> 0xffffffffde5ff3cd
+f7  : 0xffffffff5b08a7be -> 0xffffffff5b08a7be
+f10 : 0xffffffff8ba48f39 -> 0xffffffff8ba48f39
+f13 : 0xffffffff00000000 -> 0xffffffff00000000
+f14 : 0xffffffff00000000 -> 0xffffffff00000000
+f15 : 0xffffffff00000006 -> 0xffffffff00000006
+f16 : 0xfffffffff8dd32a5 -> 0xfffffffff8dd32a5
+f17 : 0xffffffff96e9cb5a -> 0xffffffff96e9cb5a
+f20 : 0xffffffff07a253b6 -> 0xffffffff07a253b6
+f25 : 0xffffffff00000000 -> 0xffffffff00000000
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+f2  : 0xffffffff85b267fd -> 0xffffffff85b267fd
+f3  : 0xffffffffcafdea73 -> 0xffffffffcafdea73
+f4  : 0xffffffff00000001 -> 0xffffffff00000001
+f5  : 0xffffffff4350cb80 -> 0xffffffff4350cb80
+f6  : 0xffffffffde5ff3cd -> 0xffffffffde5ff3cd
+f7  : 0xffffffff5b08a7be -> 0xffffffff5b08a7be
+f10 : 0xffffffff8ba48f39 -> 0xffffffff8ba48f39
+f13 : 0xffffffff00000000 -> 0xffffffff00000000
+f14 : 0xffffffff00000000 -> 0xffffffff00000000
+f15 : 0xffffffff00000006 -> 0xffffffff00000006
+f16 : 0xfffffffff8dd32a5 -> 0xfffffffff8dd32a5
+f17 : 0xffffffff96e9cb5a -> 0xffffffff96e9cb5a
+f20 : 0xffffffff07a253b6 -> 0xffffffff07a253b6
+f25 : 0xffffffff00000000 -> 0xffffffff00000000
+
+Diff between runs:
+['0x060fa0d7', '0x0301000b']
+Server listening on ('0.0.0.0', 9000)
+Client connected: beagle
+instr_index: 2
+[DEBUG] Expecting 294 bytes from beagle
+[DEBUG] Actually got 294 bytes
+[DEBUG] Expecting 294 bytes from beagle
+[DEBUG] Actually got 294 bytes
+[OK] beagle results are internally consistent
+sandbox ptr: 0x1000010000
+======= Running fuzz 0: 0x060fa0d7 =======
+x1 (ra):-> 0x0000002000000000
+======= Running fuzz 1: 0x0301000b =======
+Caught SIGSEGV (Segmentation Fault)
+Caught SIGSEGV (Segmentation Fault)
+run_until_quiet finished
+run_until_quiet finished
+x1 (ra):-> 0x0000002000000000
+
+All instructions sent
+Client beagle disconnected

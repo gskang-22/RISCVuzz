@@ -3,20 +3,11 @@ import asyncio
 from generate import generate_instructions
 import difflib
 
-TESTING = False
+TESTING = True
 
 instructions = [
-0x7ffbe793,
-0x00000013, 
-0x38c45787, 
-0x02119233,
-0x2a2b84d3, 
-0xc100352f, 
-0xcdf3e5d7, 
-0x138d5957, 
-0x6a80afd7, 
-0x976fc6d7, 
-0x02bf8787,
+0x060fa0d7, 0x0301000b
+
 ]
 
 clients = {}  # name -> writer

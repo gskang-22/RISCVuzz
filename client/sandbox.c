@@ -293,17 +293,17 @@ static const bool special_mask[32] = {
 
 void print_freg_changes(void) {
   for (int i = 0; i < 32; i++) {
-    if (freg_init_data[i] != freg_output_data[i]) {
-      uint64_t before = freg_init_data[i];
-      uint64_t after = freg_output_data[i];
+    uint64_t before = freg_init_data[i];
+    uint64_t after = freg_output_data[i];
 
-      // Hard-coded list of registers that only show lower 32 bits
-      if (special_mask[i]) {
-        before = 0xffffffff00000000ULL | (before & 0xffffffffULL);
-        after = 0xffffffff00000000ULL | (after & 0xffffffffULL);
-      }
-
-      log_append("f%-3d:-> 0x%016lx\n", i, freg_output_data[i]);
+    // Hard-coded list of registers that only show lower 32 bits
+    if (special_mask[i]) {
+      before = 0xffffffff00000000ULL | (before & 0xffffffffULL);
+      after = 0xffffffff00000000ULL | (after & 0xffffffffULL);
+    }
+    // compare is the same (after possible masking)
+    if (before != after) {
+      log_append("f%-3d: 0x%016lx -> 0x%016lx\n", i, before, after);
     }
   }
 }
