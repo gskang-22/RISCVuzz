@@ -72,11 +72,10 @@ uint32_t instrs[] = {
 };
 
 int run_client(uint32_t *instructions, size_t n_instructions) {
-  setup_signal_handlers();
-  unmap_vdso_vvar();
-
   // for (size_t i = 0; i < sizeof(fuzz_buffer) / sizeof(uint32_t); i++)
   for (size_t i = 0; i < n_instructions; i++) {
+    unmap_vdso_vvar();
+    setup_signal_handlers();
     void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
     xreg_init_data[2] = (uint64_t)sandbox_sp;
 
@@ -142,6 +141,7 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
     print_freg_changes();
 
     free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
+    restore_signal_handlers();
   }
   return 0;
 }

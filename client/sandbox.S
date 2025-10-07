@@ -113,6 +113,7 @@ return_label:
 reg_dump:
 	la      s1, xreg_output_data
 	sd      x0, 0(s1)
+	sd      x2, 8(s1)
 	sd      x2, 16(s1)
 	sd      x3, 24(s1)
 	sd      x4, 32(s1)
