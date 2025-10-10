@@ -65,16 +65,11 @@ memdiff_t *g_diffs = NULL;
 static size_t g_diffs_len = 0;
 static size_t g_diffs_cap = 0;
 
-// Example: vse128.v v0, 0(t0) encoded as 0x10028027
-uint32_t instrs[] = {
-    0x00000013,  // nop to be replaced
-    0x00000013,  // nop to be replaced
-    0x00000013,  // nop to be replaced
-    0x00000013,  // nop to be replaced
-    0x00000013,  // nop to be replaced
+static const uint32_t instrs_template[] = {0x00000013, 0x00000013, 0x00000013,
+                                           0x00000013, 0x00000013, 0x00048067};
 
-    0x00048067  // jalr x0, 0(x9)
-};
+// Example: vse128.v v0, 0(t0) encoded as 0x10028027
+uint32_t instrs[sizeof(instrs_template) / sizeof(instrs_template[0])];
 
 int run_client(uint32_t *instructions, size_t n_instructions) {
   // for (size_t i = 0; i < n_instructions; i++) {
@@ -83,14 +78,21 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
   void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
   xreg_init_data[2] = (uint64_t)sandbox_sp;
 
-  // log_append("======= Running fuzz %zu: 0x%08x =======\n", i,
-  //            instructions[i]);
-
   // prepare sandbox
   prepare_sandbox(sandbox_ptr);
+  memcpy(instrs, instrs_template, sizeof(instrs));
   fill_instrs(instructions, n_instructions);
   inject_instructions(sandbox_ptr, instrs, sizeof(instrs) / sizeof(uint32_t));
   unmap_all_regions();  // unmap g_regions
+
+  log_append("===Running fuzz:");
+  for (size_t i = 0; i < sizeof(instrs) / sizeof(instrs[0]); ++i) {
+    if (i == 0)
+      log_append(" 0x%08x", instrs[i]);
+    else
+      log_append(", 0x%08x", instrs[i]);
+  }
+  log_append("====\n");
 
   bool had_seg_fault = false;
   int jump_rc = sigsetjmp(jump_buffer, 1);

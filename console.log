@@ -1,335 +1,233 @@
-['0xbdc0df87', '0x03fe1133', '0x5300df87', '0x2800dfa7', '0x8b509fd7', '0x4580e807', '0x00085103', '0x1d504fd7', '0x480095d7', '0x615fbfd7', '0x1400920b', '0x4852a057', '0x80080113', '0x224a1a53', '0x5850d20b', '0x9fdfd057', '0xad5e0fd7', '0x0017b083', '0x5d5e0fd7', '0xc1f0f02f', '0x0287e307', '0x2200ffa7', '0xfff0541b', '0x02025a33', '0x9dc0ef87', '0xc5506fd7', '0xa690ebd7', '0xe6908067', '0x03008f87', '0xd95e1fd7', '0x4e1816d7', '0x8fd0cfd7', '0xc2008f87', '0x4200ffa7', '0x2df0daa7', '0xaf5038d7', '0x9800ef87', '0x9c9000d7', '0x25306057', '0x0252000b', '0x3300ef87', '0x3dc08f87', '0x7d5e5fd7', '0x028c0007', '0xc000c20b', '0x955e0fd7', '0x85c0ef8b', '0x41a90133', '0x1850c20b', '0x85c0ef8b']
+['0xab705087', '0xbb706087', '0xc9916cd7', '0xe21b10d7', '0x4fffe927', '0x8e405087', '0x2e30b157', '0xa24fd0d7', '0x67622057', '0xee4000a7', '0xa76329d7', '0x27f210d7', '0x89fa10d7', '0x8e4000a7', '0xa00fcfd7', '0x002f6fb3', '0x0d20bd57', '0x03f320b3', '0xc0a6a12f', '0x80008a67', '0x000bd09b', '0xcb707087', '0x041fa357', '0x5d818fd7', '0x0170000b', '0x7ff030d7', '0x0e405087', '0xfa4fa0d7', '0x7e4ffd07', '0x17f210d7', '0x69dff027', '0x29af8053', '0xe00bcf8b', '0xc1704f8b', '0xa64fa0d7', '0x6e38d157', '0x4b659fd7', '0xa2505d57', '0xc00ff007', '0x40006087', '0x7df0b4d7', '0x0ff030d7', '0x1af11057', '0x03fb8081', '0xbe4fd0d7', '0xc8f06357', '0x67f200d7', '0xb64fa0d7', '0x2e400087', '0x028f800b']
 Server listening on ('0.0.0.0', 9000)
 Client connected: beagle
 Client connected: lichee
 instr_index: 3
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xab705087, 0xbb706087, 0xc9916cd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xab705087, 0xbb706087, 0xc9916cd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xab705087, 0xbb706087, 0xc9916cd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 6
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xe21b10d7, 0x4fffe927, 0x8e405087, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xe21b10d7, 0x4fffe927, 0x8e405087, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xe21b10d7, 0x4fffe927, 0x8e405087, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 9
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-Caught SIGSEGV (Segmentation Fault)
-mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
-non-recoverable jump_rc=4, exiting loop
-run_until_quiet finished
-Caught SIGSEGV (Segmentation Fault)
-mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
-non-recoverable jump_rc=4, exiting loop
-run_until_quiet finished
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x2e30b157, 0xa24fd0d7, 0x67622057, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-Caught SIGSEGV (Segmentation Fault)
-mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
-non-recoverable jump_rc=4, exiting loop
-run_until_quiet finished
-Caught SIGSEGV (Segmentation Fault)
-mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
-non-recoverable jump_rc=4, exiting loop
-run_until_quiet finished
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x2e30b157, 0xa24fd0d7, 0x67622057, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-Caught SIGSEGV (Segmentation Fault)
-mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
-non-recoverable jump_rc=4, exiting loop
-run_until_quiet finished
-Caught SIGSEGV (Segmentation Fault)
-mmap failed (requested 0x430a808000): errno=12 (Cannot allocate memory)
-non-recoverable jump_rc=4, exiting loop
-run_until_quiet finished
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x2e30b157, 0xa24fd0d7, 0x67622057, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 12
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xee4000a7, 0xa76329d7, 0x27f210d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xee4000a7, 0xa76329d7, 0x27f210d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xee4000a7, 0xa76329d7, 0x27f210d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 15
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-SIGSEGV fault occured in restricted area. ERROR!! Returning
-x0 (zero):-> 0x0000001000010028
-x2 (sp):-> 0xe15d72430a808501
+===Running fuzz: 0x89fa10d7, 0x8e4000a7, 0xa00fcfd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-SIGSEGV fault occured in restricted area. ERROR!! Returning
-x0 (zero):-> 0x0000001000010028
-x2 (sp):-> 0xe15d72430a808501
+===Running fuzz: 0x89fa10d7, 0x8e4000a7, 0xa00fcfd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-SIGSEGV fault occured in restricted area. ERROR!! Returning
-x0 (zero):-> 0x0000001000010028
-x2 (sp):-> 0xe15d72430a808501
+===Running fuzz: 0x89fa10d7, 0x8e4000a7, 0xa00fcfd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 18
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x002f6fb3, 0x0d20bd57, 0x03f320b3, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
+x31 (t6):-> 0xe06e046a2ea1534d
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x002f6fb3, 0x0d20bd57, 0x03f320b3, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
+x31 (t6):-> 0xe06e046a2ea1534d
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x002f6fb3, 0x0d20bd57, 0x03f320b3, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
+x31 (t6):-> 0xe06e046a2ea1534d
 
 instr_index: 21
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc0a6a12f, 0x80008a67, 0x000bd09b, 0x00000013, 0x00000013, 0x00048067====Caught signal 7: Bus error
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc0a6a12f, 0x80008a67, 0x000bd09b, 0x00000013, 0x00000013, 0x00048067====Caught signal 7: Bus error
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc0a6a12f, 0x80008a67, 0x000bd09b, 0x00000013, 0x00000013, 0x00048067====Caught signal 7: Bus error
 
 instr_index: 24
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xcb707087, 0x041fa357, 0x5d818fd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xcb707087, 0x041fa357, 0x5d818fd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xcb707087, 0x041fa357, 0x5d818fd7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 27
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x0170000b, 0x7ff030d7, 0x0e405087, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x0170000b, 0x7ff030d7, 0x0e405087, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x0170000b, 0x7ff030d7, 0x0e405087, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 30
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-[jump] PC escaped sandbox: 0xffffffd112f00e9c
-x0 (zero):-> 0xffffffd112f00e9c
+===Running fuzz: 0xfa4fa0d7, 0x7e4ffd07, 0x17f210d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-[jump] PC escaped sandbox: 0xffffffd112f00e9c
-x0 (zero):-> 0xffffffd112f00e9c
+===Running fuzz: 0xfa4fa0d7, 0x7e4ffd07, 0x17f210d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-[jump] PC escaped sandbox: 0xffffffd112f00e9c
-x0 (zero):-> 0xffffffd112f00e9c
+===Running fuzz: 0xfa4fa0d7, 0x7e4ffd07, 0x17f210d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 33
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x69dff027, 0x29af8053, 0xe00bcf8b, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x69dff027, 0x29af8053, 0xe00bcf8b, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x69dff027, 0x29af8053, 0xe00bcf8b, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 36
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc1704f8b, 0xa64fa0d7, 0x6e38d157, 0x00000013, 0x00000013, 0x00048067====Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc1704f8b, 0xa64fa0d7, 0x6e38d157, 0x00000013, 0x00000013, 0x00048067====Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc1704f8b, 0xa64fa0d7, 0x6e38d157, 0x00000013, 0x00000013, 0x00048067====Caught SIGSEGV (Segmentation Fault)
+SIGSEGV fault occured in restricted area. ERROR!! Returning
 
 instr_index: 39
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x4b659fd7, 0xa2505d57, 0xc00ff007, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x4b659fd7, 0xa2505d57, 0xc00ff007, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x4b659fd7, 0xa2505d57, 0xc00ff007, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 42
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-Caught SIGSEGV (Segmentation Fault)
-Caught signal 4: Illegal instruction
-non-recoverable jump_rc=1, exiting loop
-run_until_quiet finished
-Caught signal 4: Illegal instruction
-non-recoverable jump_rc=1, exiting loop
-run_until_quiet finished
-x0 (zero):-> 0x0000001000010024
+===Running fuzz: 0x40006087, 0x7df0b4d7, 0x0ff030d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-Caught SIGSEGV (Segmentation Fault)
-Caught signal 4: Illegal instruction
-non-recoverable jump_rc=1, exiting loop
-run_until_quiet finished
-Caught signal 4: Illegal instruction
-non-recoverable jump_rc=1, exiting loop
-run_until_quiet finished
-x0 (zero):-> 0x0000001000010024
+===Running fuzz: 0x40006087, 0x7df0b4d7, 0x0ff030d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-Caught SIGSEGV (Segmentation Fault)
-Caught signal 4: Illegal instruction
-non-recoverable jump_rc=1, exiting loop
-run_until_quiet finished
-Caught signal 4: Illegal instruction
-non-recoverable jump_rc=1, exiting loop
-run_until_quiet finished
-x0 (zero):-> 0x0000001000010024
+===Running fuzz: 0x40006087, 0x7df0b4d7, 0x0ff030d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 45
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x1af11057, 0x03fb8081, 0xbe4fd0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x1af11057, 0x03fb8081, 0xbe4fd0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x1af11057, 0x03fb8081, 0xbe4fd0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 48
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc8f06357, 0x67f200d7, 0xb64fa0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc8f06357, 0x67f200d7, 0xb64fa0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught signal 4: Illegal instruction
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0xc8f06357, 0x67f200d7, 0xb64fa0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 instr_index: 50
 [OK] beagle results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-SIGSEGV fault occured in restricted area. ERROR!! Returning
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x2e400087, 0x028f800b, 0xb64fa0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] lichee results are internally consistent
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-SIGSEGV fault occured in restricted area. ERROR!! Returning
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x2e400087, 0x028f800b, 0xb64fa0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 [OK] Both clients produced identical results
 sandbox ptr: 0x1000010000
-Caught SIGSEGV (Segmentation Fault)
-SIGSEGV fault occured in restricted area. ERROR!! Returning
-x0 (zero):-> 0x0000001000010020
+===Running fuzz: 0x2e400087, 0x028f800b, 0xb64fa0d7, 0x00000013, 0x00000013, 0x00048067====Caught signal 4: Illegal instruction
 
 All instructions sent
 Client beagle disconnected

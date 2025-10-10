@@ -7,9 +7,23 @@ TESTING = False
 DEBUG = False
 
 instructions = [
-0x00007057,
-0x5e054057,
-0x10028027,
+0x8c05eb87, 0xcc05fb87, 0x3c05db87, 
+0xa9e00bd7, 0xe280d407, 0x6c05eb87, 
+0xfc05db87, 0x001b8063, 0x5e0f0bd7, 
+0xb2eb8cd7, 0xd9e01bd7, 0x6815eba7, 
+0x4c058b87, 0x6205fba7, 0xe0b0c18b, 
+0x70a2ac57, 0x2c05fb87, 0xe2808f87, 
+0xfbef9fd7, 0x1c05dba7, 0x03202033, 
+0x01e08b80, 0xa7cf4057, 0xe205fb87, 
+0x0de01bd7, 0x00000add, 0x31e0bbd7, 
+0x61e00bd7, 0xf405ebd7, 0xe205db87, 
+0xa9f0bfd7, 0x91e05bd7, 0x05e02bd7, 
+0x67f43057, 0xa5e0cbd7, 0x4815db87, 
+0x2815db87, 0x46803357, 0x3c05eb87, 
+0x8205db87, 0x5815d18b, 0x3bffe1d7, 
+0x00015d9b, 0x6015c18b, 0x68158ba7, 
+0x6d7340d7, 0x000bb003, 0x42058b87, 
+0xd90fa357, 0x09e05bd7, 
 ]
 
 clients = {}  # name -> writer
@@ -77,7 +91,7 @@ async def read_results(reader, name):
         data = await reader.readexactly(msg_len)
         # Step 3: decode and print
         message = data.decode(errors="replace")  # safe decode
-        
+
         if DEBUG == True:
             await log(f"[DEBUG] Expecting {msg_len} bytes from {name}")
             await log(f"[DEBUG] Actually got {len(data)} bytes")
@@ -98,7 +112,7 @@ async def handle_client(reader, writer, instructions, cfg):
     await log(f"Client connected: {name}")
 
     # wait until both clients are connected
-    if "beagle" and "lichee" in clients:
+    if "beagle" in clients and "lichee" in clients:
         await run_batches(instructions, cfg)
 
 async def run_batches(instructions, cfg):
@@ -199,6 +213,9 @@ async def run_batches(instructions, cfg):
         writer.close()
         await writer.wait_closed()
         await log(f"Client {name} disconnected")
+    clients.clear()
+    instr_index = 0
+
 
 async def main():
     # Clear the log file at startup
