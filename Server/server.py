@@ -29,10 +29,11 @@ instructions = [
 clients = {}  # name -> writer
 log_lock = asyncio.Lock() # global lock 
 
-async def log(msg):
+async def log(msg, do_print=True):
     """Async-safe log function that prints and flushes immediately."""
-    async with log_lock:
+    if do_print:
         print(msg, flush=True)  # prints to console
+    async with log_lock:
         with open("/home/szekang/Documents/RISCVuzz/console.log", "a") as logf:  # append to file
             logf.write(msg + "\n")
             logf.flush()
@@ -178,8 +179,8 @@ async def run_batches(instructions, cfg):
                 )
                 await log(''.join(diff))  # print the diff
             else:
-                await log(f"[OK] {name} results are internally consistent")
-                await log(run1)
+                await log(f"[OK] {name} results are internally consistent", do_print=False)
+                await log(run1, do_print=False)
 
             results[name] = run1
 
