@@ -6,7 +6,6 @@
 	.global freg_init_data
 	.global xreg_output_data
 	.global freg_output_data
-	.global test_memory
 
 	.extern sandbox_ptr
 
@@ -104,7 +103,7 @@ xreg_init:
 	ld      s1, 0(s1)
 
 # Jump absolutely to sandbox start (jalr zero, 0(s0))
-	jalr    s1, 32(s1)                             # offset 4 to skip the first ebreak
+	jalr    s1, 32(s1)               # offset 4 to skip the first ebreak
 
 ########################################################
 
@@ -479,73 +478,3 @@ reg_tp_output:
 	.dword  0x5117d99573ca5da5
 reg_fp_output:
 	.dword  0x2215f96f49c5ecff
-
-	//      Memory Blocks
-	.align  8
-test_memory:
-	.dword  0xb5def2c34e52acef, 0xe4c3d153eb80afc4
-	.dword  0x531697bc1b5b6a28, 0x6184f19b263ec0ed
-	.dword  0x605ec91084e0474c, 0x28e3fdfefa3b7bc4
-	.dword  0x2d396e4b9d539b4a, 0x5c07c49aebcf45bf
-	.dword  0xc95d924c89772cb4, 0x9efbfacfdf9bce06
-	.dword  0x21e5f97e5814dde6, 0xc62ae09ea9841036
-	.dword  0x3816674b2f53776c, 0x9d7d453b29db3f61
-	.dword  0xd52b46d10ba334a5, 0x989dc0d8e768dd59
-	.dword  0x35aeaad49dd3f6a3, 0xf65537cb6a00822d
-	.dword  0x5f08d8f702a14155, 0x41c3facc385017f4
-	.dword  0x8ab1d426241e66e8, 0xb49c189c9c6f8ec8
-	.dword  0x5ecc9a56472f8569, 0x32b6b4cfd1e94d15
-	.dword  0x934c09702ae23aae, 0xe2a777e31da2e013
-	.dword  0x604c9f89ef433276, 0x958e6c8f7081b090
-	.dword  0x554d8a56d37bf2cf, 0xa399de61811fbff3
-	.dword  0x64a6b9e081d68ab8, 0xcfaf0d8aeba0b17c
-	.dword  0x5a40ea74b9fb0706, 0x74c9cbf390f7a3d0
-	.dword  0x2b6fd9dc8094d18b, 0x5010579594f29eb4
-	.dword  0x8f1e1bd3bdcc5e73, 0xdc9a060774689918
-	.dword  0xcc7d41b633e3cbf1, 0x6ebc955777335b57
-	.dword  0x52644976ab0b581b, 0x259d361d7c6ec1bd
-	.dword  0x4db187d4f16cd113, 0xcfffa2cbcf0b2349
-	.dword  0x68a481d11cbb6366, 0x061ed84a5d58e0b3
-	.dword  0x2377695a37876ab8, 0xd30043c2a40f5fb0
-	.dword  0xc6c7314af66c289f, 0x3d6b79b8acb1f673
-	.dword  0xf5d46c98222785cf, 0x10bdca5f3c598b77
-	.dword  0x00966cc3620a4178, 0x417247275311ed7b
-	.dword  0x973d5393f03132eb, 0xd5ac0d99416627ce
-	.dword  0xb1570c0854de8183, 0x1099eb6641a756cc
-	.dword  0xd5965e888a53f6c2, 0xcd67afbcd12dc0a8
-	.dword  0x637a945f3cfdceba, 0x1ce2bddc238c366b
-	.dword  0xb1095e663ecfaaae, 0xcd3cb4e962aa013b
-	.dword  0x53b3f3009eab89f8, 0x0eb04100f337dfe0
-	.dword  0x8f9b974e2fc4ed2c, 0xc77969915938d884
-	.dword  0xeaf9079a1770877d, 0xced3f0e5549fe2ba
-	.dword  0x37ad731743f3225f, 0x76c798fe5e8fadc1
-	.dword  0xf23afecc72e8976d, 0xe0b361a754da0708
-	.dword  0xb6ce03cbc406048d, 0x3e0613ca1f30a4f4
-	.dword  0x51df7caa3b889e52, 0x96a3adfeb85159e1
-	.dword  0xdd8c562b30d4c4a1, 0x0e5c8664d193f367
-	.dword  0xa644973d77df3d96, 0x13d435b550e049de
-	.dword  0xa43094284934baa8, 0xe2839f9304774423
-	.dword  0x11d9a10313120c0a, 0x6062ac26ed61d39b
-	.dword  0x9f86f767a841a654, 0x837b86eb8d052c77
-	.dword  0x7c96c36ac5995e62, 0x0d7276c7548bbe39
-	.dword  0xa8268bc6df3d7f7c, 0xd82aa35b11c6b077
-	.dword  0xdfdd695a317c9fb7, 0x08615b9b6523e7df
-	.dword  0xf9ddc1d37069d69a, 0xf69eb19f9b90d77a
-	.dword  0x550b79a94b913a03, 0x45737fbbe5e2a234
-	.dword  0x5c2ed14d9a7cc54b, 0x8aea2acdc9e0509c
-	.dword  0x5c4b61a4197e0ea8, 0xdb90b5d6c7941ee7
-	.dword  0x5805ebaf76936ed3, 0xecd7faccc455273a
-	.dword  0x386aef8c42857eea, 0x03ed1cae9c4aec28
-	.dword  0x1a133ea184c41096, 0x6aef86d8c7408778
-	.dword  0x4bc2fd15ef580470, 0x31b70d98ceb5812c
-	.dword  0x6472c68465b1a2a0, 0xe6830401357692be
-	.dword  0x1979e9eafb7159c7, 0x1f245afdb4e8daac
-	.dword  0xdd8bf0e729c3081e, 0xd9c21da96dd64437
-	.dword  0xedaae62588c232df, 0x3e78dedbf2322766
-	.dword  0x1d530f1450dfcfe3, 0x460aec083f396551
-	.dword  0x363c0cd89ca8858c, 0x76e05945bbc1849b
-	.dword  0x155698844fd484e4, 0xd5f33aaab9be923f
-	.dword  0x456d4e878b786206, 0x76359ee07c3fca8f
-	.dword  0xd3423d6632c08ebc, 0xb3c41ef0489f4e7a
-
-	.align  8

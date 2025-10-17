@@ -53,9 +53,16 @@ int main() {
       0x4077292f,  // amoor.w s2,t2,(a4)
   };
 
+  // run sandbox 2
   printf("Running sandbox 1...\n");
   fflush(stdout);
   run_client(instructions, sizeof(instructions) / sizeof(instructions[0]));
+
+  // run sandbox 2
+  printf("Running sandbox 2..\n");
+  fflush(stdout);
+  run_client(instructions, sizeof(instructions) / sizeof(instructions[0]));
+
 #else
   set_up_tcp();
 

@@ -7,23 +7,10 @@ TESTING = False
 DEBUG = False
 
 instructions = [
-0x8c05eb87, 0xcc05fb87, 0x3c05db87, 
-0xa9e00bd7, 0xe280d407, 0x6c05eb87, 
-0xfc05db87, 0x001b8063, 0x5e0f0bd7, 
-0xb2eb8cd7, 0xd9e01bd7, 0x6815eba7, 
-0x4c058b87, 0x6205fba7, 0xe0b0c18b, 
-0x70a2ac57, 0x2c05fb87, 0xe2808f87, 
-0xfbef9fd7, 0x1c05dba7, 0x03202033, 
-0x01e08b80, 0xa7cf4057, 0xe205fb87, 
-0x0de01bd7, 0x00000add, 0x31e0bbd7, 
-0x61e00bd7, 0xf405ebd7, 0xe205db87, 
-0xa9f0bfd7, 0x91e05bd7, 0x05e02bd7, 
-0x67f43057, 0xa5e0cbd7, 0x4815db87, 
-0x2815db87, 0x46803357, 0x3c05eb87, 
-0x8205db87, 0x5815d18b, 0x3bffe1d7, 
-0x00015d9b, 0x6015c18b, 0x68158ba7, 
-0x6d7340d7, 0x000bb003, 0x42058b87, 
-0xd90fa357, 0x09e05bd7, 
+    
+0x00007057, 0x028df007, 0x530f8b87, 0xd826dba7, 0xe28e8127,
+0x00007057, 0x028df007, 0x530f8b87, 0xd826dba7, 0xe28e8127
+
 ]
 
 clients = {}  # name -> writer
@@ -113,10 +100,11 @@ async def handle_client(reader, writer, instructions, cfg):
     await log(f"Client connected: {name}")
 
     # wait until both clients are connected
-    if "beagle" in clients and "lichee" in clients:
+    if  "beagle" in clients and "lichee" in clients:
         await run_batches(instructions, cfg)
-
+list1 = []
 async def run_batches(instructions, cfg):
+    global list1
     # Each client independently runs the whole list
     instr_index = 0
     while instr_index < len(instructions):
@@ -126,10 +114,15 @@ async def run_batches(instructions, cfg):
         instr_index += len(batch)
         await log(f"instr_index: {instr_index}")
 
+        instrs_to_send = [
+            0x00007057,
+            0x5e054057,
+            batch[0],    
+        ]
         # Send batch to both clients
         for name, (reader, writer) in clients.items():
-            header = struct.pack("!I", len(batch))
-            payload = b"".join(struct.pack("!I", inst) for inst in batch)
+            header = struct.pack("!I", len(instrs_to_send))
+            payload = b"".join(struct.pack("!I", inst) for inst in instrs_to_send)
             writer.write(header + payload)
             await writer.drain()
 
@@ -194,7 +187,8 @@ async def run_batches(instructions, cfg):
                 await log(results[lichee])
 
                 await log(f"[MISMATCH] Results differ between {beagle} and {lichee}")
-                input("Paused for debugging. Press Enter to continue...")
+                # input("Paused for debugging. Press Enter to continue...")
+                list1.append(batch[0])
 
                 # Split responses into lines and keep line endings
                 diff = difflib.unified_diff(
@@ -216,6 +210,8 @@ async def run_batches(instructions, cfg):
         await log(f"Client {name} disconnected")
     clients.clear()
     instr_index = 0
+
+    print([hex(x) for x in list1])
 
 
 async def main():
