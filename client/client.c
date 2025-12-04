@@ -22,21 +22,21 @@ extern void print_xreg_changes();
 extern void print_freg_changes();
 
 // function declarations
-static void diffs_push(void *addr, uint8_t oldv, uint8_t newv);
-static bool probe_read_byte(uint8_t *addr, uint8_t *out);
+static void diffs_push(void* addr, uint8_t oldv, uint8_t newv);
+static bool probe_read_byte(uint8_t* addr, uint8_t* out);
 static void report_diffs(uint8_t expected);
-static bool region_exists(void *addr);
-static inline void *page_align_down(void *p);
-static void map_two_pages(void *base, uint8_t fill_byte);
+static bool region_exists(void* addr);
+static inline void* page_align_down(void* p);
+static void map_two_pages(void* base, uint8_t fill_byte);
 static void fill_all_pages(uint8_t fill_byte);
 void unmap_all_regions(void);
 static void run_until_quiet(int8_t fill_byte);
-void *alloc_sandbox_stack(size_t stack_size);
-void free_sandbox_stack(void *stack_top, size_t stack_size);
+void* alloc_sandbox_stack(size_t stack_size);
+void free_sandbox_stack(void* stack_top, size_t stack_size);
 void arm_timeout_timer(void);
 void disarm_timeout_timer(void);
-void fill_instrs(uint32_t *instructions, size_t n_instructions);
-int run_client(uint32_t *instructions, size_t n_instructions);
+void fill_instrs(uint32_t* instructions, size_t n_instructions);
+int run_client(uint32_t* instructions, size_t n_instructions);
 
 // extern variables
 extern sigjmp_buf jump_buffer;
@@ -53,15 +53,15 @@ extern size_t page_size;
 #define STACK_BASE_ADDR 0x2000000000UL  // 128 GB
 
 // private variables
-uint8_t *sandbox_ptr;
+uint8_t* sandbox_ptr;
 
 volatile sig_atomic_t g_faults_this_run = 0;
 volatile atomic_uintptr_t g_fault_addr = 0;
-mapped_region_t *g_regions = NULL;
+mapped_region_t* g_regions = NULL;
 size_t g_regions_len = 0;  // global counter variable (number of valid entries
                            // currently stored in the g_regions array)
 
-memdiff_t *g_diffs = NULL;
+memdiff_t* g_diffs = NULL;
 static size_t g_diffs_len = 0;
 static size_t g_diffs_cap = 0;
 
@@ -71,11 +71,35 @@ static const uint32_t instrs_template[] = {0x00000013, 0x00000013, 0x00000013,
 // Example: vse128.v v0, 0(t0) encoded as 0x10028027
 uint32_t instrs[sizeof(instrs_template) / sizeof(instrs_template[0])];
 
-int run_client(uint32_t *instructions, size_t n_instructions) {
-  // for (size_t i = 0; i < n_instructions; i++) {
+/**
+ * @brief Run a single fuzzing test case inside the RISC-V sandbox.
+ *
+ * Sets up the sandbox environment, injects the provided instructions, and runs
+ * them with signal-based recovery for SIGSEGV and timeouts.
+ * If a segmentation fault occurs, the test is re-run using lazy page mapping to
+ * capture architectural differences.
+ * Finally, prints register deltas and restores all host state.
+ *
+ * Execution flow:
+ * 1. Unmap VDSO/VVAR pages to prevent unintended interactions.
+ * 2. Install custom signal handlers to catch SIGSEGV/timeouts.
+ * 3. Allocate a private stack for the sandbox and initialise xregs.
+ * 4. Prepare the sandbox environment and inject instructions.
+ * 5. Attempt to run the sandbox:
+ *    - If it completes normally: collect register diffs.
+ *    - If a SIGSEGV occurs: run a second pass where missing pages are
+ *      lazily mapped and re-run to capture differences.
+ * 6. Print architectural register deltas.
+ * 7. Free all allocated resources and restore host signal state.
+ *
+ * @param instructions     Array of RISC-V instructions to fuzz.
+ * @param n_instructions   Number of instructions supplied.
+ * @return 0
+ */
+int run_client(uint32_t* instructions, size_t n_instructions) {
   unmap_vdso_vvar();
   setup_signal_handlers();
-  void *sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
+  void* sandbox_sp = alloc_sandbox_stack(SANDBOX_STACK_SIZE);
   xreg_init_data[2] = (uint64_t)sandbox_sp;
 
   // prepare sandbox
@@ -140,10 +164,19 @@ int run_client(uint32_t *instructions, size_t n_instructions) {
 
   free_sandbox_stack(sandbox_sp, SANDBOX_STACK_SIZE);
   restore_signal_handlers();
-  //}
+
   return 0;
 }
 
+/**
+ * @brief Retry sandbox execution until it finishes without SIGSEGV.
+ *
+ * Each time a segmentation fault occurs, maps in the missing memory page using
+ * `map_two_pages()` and retries. Stops when execution completes, a
+ * non-recoverable signal occurs, or the retry limit is exceeded.
+ *
+ * @param fill_byte  Value used to initialise newly mapped pages.
+ */
 static void run_until_quiet(int8_t fill_byte) {
   g_fault_addr = 0;
   int retries = 0;
@@ -166,7 +199,7 @@ static void run_until_quiet(int8_t fill_byte) {
       disarm_timeout_timer();
       if (jump_rc == 2) {
         // segv happened; map and retry
-        void *base = page_align_down((void *)g_fault_addr);
+        void* base = page_align_down((void*)g_fault_addr);
         map_two_pages(base, fill_byte);
       } else if (jump_rc == 1 || jump_rc == 3 || jump_rc == 4 || jump_rc == 5) {
         log_append("non-recoverable jump_rc=%i, exiting loop\n", jump_rc);
@@ -177,8 +210,17 @@ static void run_until_quiet(int8_t fill_byte) {
   log_append("run_until_quiet finished\n");
 }
 
-// Maps two pages of memory (base and base + pagesize)
-static void map_two_pages(void *base, uint8_t fill_byte) {
+/**
+ * @brief Map two pages at the given base address for lazy fault recovery.
+ *
+ * Used after SIGSEGV to supply missing memory. Performs safety checks, maps
+ * exactly two pages at `base` if not already mapped, records the region, and
+ * fills it with `fill_byte`. On error, exits via siglongjmp.
+ *
+ * @param base        Page-aligned address to map.
+ * @param fill_byte   Value to fill the mapped pages with.
+ */
+static void map_two_pages(void* base, uint8_t fill_byte) {
   if (g_regions_len >= MAX_MAPPED_PAGES) return;
 
   if (base == NULL) {
@@ -195,7 +237,7 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
   /* if region exists at exactly this base, skip */
   if (region_exists(base)) return;
 
-  void *r =
+  void* r =
       mmap(base, 2 * page_size, PROT_READ | PROT_WRITE,
            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,  // MAP_FIXED
            -1, 0);
@@ -226,10 +268,17 @@ static void map_two_pages(void *base, uint8_t fill_byte) {
   memset(r, fill_byte, 2 * page_size);
 }
 
-static void diffs_push(void *addr, uint8_t oldv, uint8_t newv) {
+/**
+ * @brief Append a memory-difference record to the global diff buffer.
+ *
+ * @param addr   Address where a memory change was detected.
+ * @param oldv   Expected byte value before sandbox execution.
+ * @param newv   Actual byte value read after execution.
+ */
+static void diffs_push(void* addr, uint8_t oldv, uint8_t newv) {
   if (g_diffs_len == g_diffs_cap) {
     size_t ncap = g_diffs_cap ? g_diffs_cap * 2 : 256;
-    memdiff_t *tmp = realloc(g_diffs, ncap * sizeof(*g_diffs));
+    memdiff_t* tmp = realloc(g_diffs, ncap * sizeof(*g_diffs));
     if (!tmp) {
       perror("realloc");
       exit(1);
@@ -240,6 +289,11 @@ static void diffs_push(void *addr, uint8_t oldv, uint8_t newv) {
   g_diffs[g_diffs_len++] = (memdiff_t){addr, oldv, newv};
 }
 
+/**
+ * @brief Scan all mapped regions for memory modifications and report diffs.
+ *
+ * @param expected  The fill-byte that indicates an "unchanged" memory value.
+ */
 static void report_diffs(uint8_t expected) {
   g_diffs_len = 0;
 
@@ -250,7 +304,7 @@ static void report_diffs(uint8_t expected) {
   }
 
   for (size_t i = 0; i < g_regions_len; i++) {
-    void *base = g_regions[i].addr;
+    void* base = g_regions[i].addr;
     size_t len = g_regions[i].len;
 
     if (base == NULL || len == 0) {
@@ -259,7 +313,7 @@ static void report_diffs(uint8_t expected) {
       continue;
     }
 
-    uint8_t *p = (uint8_t *)g_regions[i].addr;
+    uint8_t* p = (uint8_t*)g_regions[i].addr;
     size_t n = g_regions[i].len;
 
     if ((uintptr_t)p % page_size != 0 || n % page_size != 0) {
@@ -272,12 +326,12 @@ static void report_diffs(uint8_t expected) {
         continue;
       }
 
-      uint8_t *p = (uint8_t *)g_regions[i].addr;
+      uint8_t* p = (uint8_t*)g_regions[i].addr;
       size_t pages = len / page_size;
 
       for (size_t pg = 0; pg < pages; ++pg) {
         uint8_t sample = 0;
-        uint8_t *page_addr = p + pg * page_size;
+        uint8_t* page_addr = p + pg * page_size;
 
         /* probe the first byte of the page before scanning */
         if (!probe_read_byte(page_addr, &sample)) {
@@ -315,7 +369,7 @@ static void report_diffs(uint8_t expected) {
           }
 
           if (newv != expected) {
-            void *absaddr = page_addr + off;
+            void* absaddr = page_addr + off;
             diffs_push(absaddr, expected, newv);
           }
         }
@@ -331,7 +385,14 @@ static void report_diffs(uint8_t expected) {
   }
 }
 
-static bool probe_read_byte(uint8_t *addr, uint8_t *out) {
+/**
+ * @brief Safely attempt to read one byte from a potentially unsafe address.
+ *
+ * @param addr  Address to read from.
+ * @param out   Output pointer for the successfully read byte.
+ * @return true if the read was successful; false if a fault occurred.
+ */
+static bool probe_read_byte(uint8_t* addr, uint8_t* out) {
   int rc = sigsetjmp(jump_buffer, 1);
   if (rc == 0) {
     /* Attempt read: volatile to force the actual memory read */
@@ -345,28 +406,52 @@ static bool probe_read_byte(uint8_t *addr, uint8_t *out) {
   }
 }
 
-static bool region_exists(void *addr) {
+/**
+ * @brief Check whether a region starting at the given address is already
+ * tracked.
+ *
+ * @param addr  Base address to compare against stored regions.
+ * @return true if a region with this base address exists; false otherwise.
+ */
+static bool region_exists(void* addr) {
   for (size_t i = 0; i < g_regions_len; i++)
     if (g_regions[i].addr == addr) return true;
   return false;
 }
 
-// Takes an arbitrary address (p, which caused the segfault) and rounds it down
-// to the start of the containing page Since mmap() only works at page-aligned
-// addresses
-static inline void *page_align_down(void *p) {
+/**
+ * @brief Align an arbitrary address down to its page boundary.
+ *
+ * @param p  Arbitrary address that may not be page aligned.
+ * @return The page-aligned base address.
+ */
+static inline void* page_align_down(void* p) {
   uintptr_t u = (uintptr_t)p;
-  return (void *)(u & ~(uintptr_t)(page_size - 1));
+  return (void*)(u & ~(uintptr_t)(page_size - 1));
 }
 
-// fills all pages in g_region with fill_byte
+/**
+ * @brief Overwrite every mapped region with a uniform fill_byte.
+ *
+ * Iterates through all lazily-mapped memory regions tracked in g_regions
+ * and fills their entire contents with the given value. Used to detect
+ * memory writes by comparing against a known baseline.
+ *
+ * @param fill_byte  Value to write into all mapped pages.
+ */
 static void fill_all_pages(uint8_t fill_byte) {
   for (size_t i = 0; i < g_regions_len; i++) {
     memset(g_regions[i].addr, fill_byte, g_regions[i].len);
   }
 }
 
-// Unmap all mapped regions and reset g_regions_len
+/**
+ * @brief Unmap all memory regions previously mapped for lazy fault recovery
+ * and reset reset g_regions_len.
+ *
+ * This is used to clean up before running the next sandboxed instruction
+ * sequence.
+ */
 void unmap_all_regions(void) {
   for (size_t i = 0; i < g_regions_len; i++) {
     // log_append("munmapping: %p\n", g_regions[i].addr);
@@ -389,13 +474,21 @@ void unmap_all_regions(void) {
   g_regions_len = 0;
 }
 
-void *alloc_sandbox_stack(size_t stack_size) {
+/**
+ * @brief Allocate and set up a protected stack region for the sandbox.
+ *
+ * Allocates a contiguous memory range consisting of:
+ *   - one guard page (no access, via mprotect),
+ *   - followed by the actual sandbox stack space.
+ *
+ * @param stack_size  Desired size of the usable stack (excluding guard pages).
+ * @return Pointer to the top of the newly allocated sandbox stack.
+ */
+void* alloc_sandbox_stack(size_t stack_size) {
   size_t total = stack_size + STACK_GUARD_PAGES * page_size;
 
-  // void *base = mmap(NULL, total, PROT_READ | PROT_WRITE,
-  //                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  void *base =
-      mmap((void *)(STACK_BASE_ADDR - total), total, PROT_READ | PROT_WRITE,
+  void* base =
+      mmap((void*)(STACK_BASE_ADDR - total), total, PROT_READ | PROT_WRITE,
            MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE, -1, 0);
   if (base == MAP_FAILED) {
     perror("mmap sandbox stack");
@@ -407,16 +500,26 @@ void *alloc_sandbox_stack(size_t stack_size) {
     exit(1);
   }
   // Return pointer to stack top (grow-down stack)
-  return (uint8_t *)base + total;
+  return (uint8_t*)base + total;
 }
 
-void free_sandbox_stack(void *stack_top, size_t stack_size) {
+/**
+ * @brief Unmap the sandbox stack previously allocated with
+ * alloc_sandbox_stack().
+ *
+ * @param stack_top   Pointer returned by alloc_sandbox_stack() (top of stack).
+ * @param stack_size  Size of the usable stack portion (without guard pages).
+ */
+void free_sandbox_stack(void* stack_top, size_t stack_size) {
   size_t ps = page_size;
-  void *base = (uint8_t *)stack_top - (stack_size + STACK_GUARD_PAGES * ps);
+  void* base = (uint8_t*)stack_top - (stack_size + STACK_GUARD_PAGES * ps);
   size_t total = stack_size + STACK_GUARD_PAGES * ps;
   munmap(base, total);
 }
 
+/**
+ * @brief Arm a timer to detect sandbox hangs (infinite loops).
+ */
 void arm_timeout_timer(void) {
   struct itimerval timer;
   timer.it_value.tv_sec = 0;
@@ -426,12 +529,17 @@ void arm_timeout_timer(void) {
   setitimer(ITIMER_REAL, &timer, NULL);
 }
 
+/**
+ * @brief Disarms the timer detecting sandbox hangs when
+ * sandbox (asm code) returns successfully
+ */
 void disarm_timeout_timer(void) {
   struct itimerval timer = {0};
   setitimer(ITIMER_REAL, &timer, NULL);
 }
 
-void fill_instrs(uint32_t *instructions, size_t n_instructions) {
+// Copies user-provided instructions into instrs[]
+void fill_instrs(uint32_t* instructions, size_t n_instructions) {
   size_t instrs_len = sizeof(instrs) / sizeof(instrs[0]);
 
   // don’t touch the last slot (jalr)

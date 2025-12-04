@@ -34,7 +34,7 @@ extern uint64_t freg_init_data[];
 extern uint64_t freg_output_data[];
 
 extern void signal_trampoline();  // from assembly
-extern uint8_t *sandbox_ptr;
+extern uint8_t* sandbox_ptr;
 
 extern volatile atomic_uintptr_t g_fault_addr;
 extern volatile sig_atomic_t g_faults_this_run;
@@ -45,7 +45,7 @@ extern volatile sig_atomic_t g_faults_this_run;
 #define SANDBOX_BASE_ADDR 0x1000000000UL  // 64 GB
 
 // private variables
-const char *reg_names[] = {
+const char* reg_names[] = {
     "x0 (zero)", "x1 (ra)",  "x2 (sp)",    "x3 (gp)",   "x4 (tp)",  "x5 (t0)",
     "x6 (t1)",   "x7 (t2)",  "x8 (s0/fp)", "x9 (s1)",   "x10 (a0)", "x11 (a1)",
     "x12 (a2)",  "x13 (a3)", "x14 (a4)",   "x15 (a5)",  "x16 (a6)", "x17 (a7)",
@@ -65,10 +65,33 @@ size_t sandbox_pages = 1;  // 4 KB sandbox
 size_t guard_pages = 16;   // 64 KB guards (tunable)
 size_t start_offset = 0x20;
 
-// Signal handler for SIGILL and SIGSEGV
-void signal_handler(int signo, siginfo_t *info, void *context) {
-  ucontext_t *uc = (ucontext_t *)context;
-  void *fault_addr = info->si_addr;
+struct sigaction old_sa_ill, old_sa_segv, old_sa_bus, old_sa_fpe, old_sa_trap,
+    old_sa_alrm;
+stack_t old_ss;
+
+/**
+ * @brief Signal handler for sandboxed execution faults.
+ *
+ * Handles SIGSEGV, SIGILL, SIGBUS, SIGFPE, SIGTRAP, and SIGALRM.
+ *   - Saves general-purpose (x0-x31) and floating-point registers (f0-f31)
+ *     plus fcsr from the sandbox context.
+ *   - SIGSEGV:
+ *       - Records the faulting address for lazy page mapping.
+ *       - Aborts if PC escapes sandbox or fault occurs in restricted areas.
+ *       - Retries execution if within fault threshold.
+ *   - Other signals (SIGILL, SIGBUS, SIGFPE, SIGTRAP): abort via siglongjmp.
+ *   - SIGALRM: triggered by timeout; aborts sandbox execution.
+ *
+ * Uses siglongjmp with different codes to signal the type of fault/recovery
+ * action to the parent control loop.
+ *
+ * @param signo    Signal number received.
+ * @param info     Pointer to siginfo_t with signal metadata.
+ * @param context  Pointer to ucontext_t containing CPU state at fault.
+ */
+void signal_handler(int signo, siginfo_t* info, void* context) {
+  ucontext_t* uc = (ucontext_t*)context;
+  void* fault_addr = info->si_addr;
   uintptr_t pc = uc->uc_mcontext.__gregs[REG_PC];
   // === Save general-purpose registers (x0-x31) ===
   for (int i = 0; i < 32; i++) {
@@ -76,7 +99,7 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
   }
 
   // === Save floating-point registers if available ===
-  union __riscv_mc_fp_state *fpstate = &uc->uc_mcontext.__fpregs;
+  union __riscv_mc_fp_state* fpstate = &uc->uc_mcontext.__fpregs;
   for (int i = 0; i < 32; i++) {
     freg_output_data[i] = fpstate->__d.__f[i];
   }
@@ -127,11 +150,18 @@ void signal_handler(int signo, siginfo_t *info, void *context) {
   }
 }
 
-struct sigaction old_sa_ill, old_sa_segv, old_sa_bus, old_sa_fpe, old_sa_trap,
-    old_sa_alrm;
-stack_t old_ss;
-
-// Setup signal handlers
+/**
+ * @brief Install signal handlers for sandboxed execution.
+ *
+ * Sets up an alternate stack and installs handlers for SIGILL, SIGSEGV,
+ * SIGBUS, SIGFPE, SIGTRAP, and SIGALRM.
+ *
+ * All signals are directed to the sandbox's signal trampoline, which ultimately
+ * calls the main signal handler.
+ *
+ * Uses SA_SIGINFO and SA_ONSTACK to safely handle faults on the alternate
+ * stack.
+ */
 void setup_signal_handlers() {
   // save/replace sigaltstack
   sigaltstack(NULL, &old_ss);
@@ -141,7 +171,7 @@ void setup_signal_handlers() {
 
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
-  sa.sa_sigaction = (void *)signal_trampoline;
+  sa.sa_sigaction = (void*)signal_trampoline;
   sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
   sigemptyset(&sa.sa_mask);
 
@@ -153,6 +183,13 @@ void setup_signal_handlers() {
   sigaction(SIGALRM, &sa, NULL);
 }
 
+/**
+ * @brief Restore the original signal handlers and alternate stack.
+ *
+ * Reverts all signals previously overridden by setup_signal_handlers()
+ * to their original handlers.
+ * Also restores the previous alternate stack to ensure host state integrity.
+ */
 void restore_signal_handlers() {
   sigaction(SIGILL, &old_sa_ill, NULL);
   sigaction(SIGSEGV, &old_sa_segv, NULL);
@@ -165,13 +202,18 @@ void restore_signal_handlers() {
   if (sigaltstack(&old_ss, NULL) != 0) perror("sigaltstack restore");
 }
 
-// allocates a memory buffer to write to and execute
-// required for dynamic code injection
-uint8_t *allocate_executable_buffer() {
+/**
+ * @brief Allocate a protected, executable sandbox region.
+ *
+ * Reserves a contiguous range of pages at SANDBOX_BASE_ADDR using PROT_NONE.
+ * The region layout is:
+ *   [guard pages][sandbox pages][guard pages]
+ */
+uint8_t* allocate_executable_buffer() {
   size_t total_pages = sandbox_pages + 2 * guard_pages;
   size_t total_size = total_pages * page_size;
 
-  void *buf = mmap((void *)SANDBOX_BASE_ADDR, total_size, PROT_NONE,
+  void* buf = mmap((void*)SANDBOX_BASE_ADDR, total_size, PROT_NONE,
                    MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE, -1, 0);
 
   if (buf == MAP_FAILED) {
@@ -179,16 +221,20 @@ uint8_t *allocate_executable_buffer() {
     exit(1);
   }
 
-  uint8_t *sandbox = buf + guard_pages * page_size;
+  uint8_t* sandbox = buf + guard_pages * page_size;
   return sandbox;
 }
 
-void free_executable_buffer(uint8_t *sandbox) {
+/**
+ * @brief Free the sandbox allocation created by allocate_executable_buffer().
+ * Called when the client closes its TCP connection with the server.
+ */
+void free_executable_buffer(uint8_t* sandbox) {
   size_t total_pages = sandbox_pages + 2 * guard_pages;
   size_t total_size = total_pages * page_size;
 
   // compute back the original base (buf)
-  void *buf = sandbox - guard_pages * page_size;
+  void* buf = sandbox - guard_pages * page_size;
 
   if ((uintptr_t)buf % page_size != 0) {
     fprintf(stderr, "munmap addr not page-aligned: %p\n", buf);
@@ -202,15 +248,30 @@ void free_executable_buffer(uint8_t *sandbox) {
   }
 }
 
-// Reset sandbox to PROT_NONE after each run
-void prepare_sandbox(uint8_t *sandbox_ptr) {
+/**
+ * @brief Reset sandbox memory protections to PROT_NONE.
+ *
+ * Called before each execution run to ensure the sandbox region begins fully
+ * inaccessible. Also clears values in sandbox region.
+ */
+void prepare_sandbox(uint8_t* sandbox_ptr) {
   if (mprotect(sandbox_ptr, page_size * sandbox_pages, PROT_NONE) != 0) {
     perror("mprotect NONE");
     exit(1);
   }
 }
 
-void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs,
+/**
+ * @brief Inject fuzzed instructions into the sandbox and make them executable.
+ *
+ * 1. Writes two leading and  * two trailing ebreak instructions as safety
+ * padding
+ * 2. Copies the fuzzed instruction sequence
+ * 3. Issues `fence.i` to flush the instruction cache
+ * 4. Transitions the sandbox region to RX permissions so the injected code can
+ * be executed safely.
+ */
+void inject_instructions(uint8_t* sandbox_ptr, const uint32_t* instrs,
                          size_t num_instrs) {
   // enable write access
   if (mprotect(sandbox_ptr, sandbox_pages * page_size,
@@ -219,20 +280,15 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs,
     exit(1);
   }
 
-  // Fill sandbox with ebreak (0x00100073)
-  // for (size_t i = 0; i < sandbox_pages * page_size; i += 4) {
-  //     *(uint32_t *)(sandbox_ptr + i) = 0x00100073;
-  // }
-
   // fill 2 ebreaks before the sandboxed instructions
   for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
-    *(uint32_t *)(sandbox_ptr + start_offset - 2 * sizeof(uint32_t) + i) =
+    *(uint32_t*)(sandbox_ptr + start_offset - 2 * sizeof(uint32_t) + i) =
         0x00100073;
 
   // fill 2 ebreaks after the sandboxed instructions
   for (size_t i = 0; i < 2 * sizeof(uint32_t); i += 4)
-    *(uint32_t *)(sandbox_ptr + start_offset + num_instrs * sizeof(uint32_t) +
-                  i) = 0x00100073;
+    *(uint32_t*)(sandbox_ptr + start_offset + num_instrs * sizeof(uint32_t) +
+                 i) = 0x00100073;
 
   // copy fuzzed instructions
   memcpy(sandbox_ptr + start_offset, instrs, num_instrs * sizeof(uint32_t));
@@ -248,8 +304,9 @@ void inject_instructions(uint8_t *sandbox_ptr, const uint32_t *instrs,
   }
 }
 
+// Unmaps VDSO and VVAR pages from this process.
 void unmap_vdso_vvar() {
-  FILE *maps = fopen("/proc/self/maps", "r");
+  FILE* maps = fopen("/proc/self/maps", "r");
   if (!maps) {
     perror("fopen /proc/self/maps");
     exit(EXIT_FAILURE);
@@ -262,7 +319,7 @@ void unmap_vdso_vvar() {
       unsigned long start, end;
       if (sscanf(line, "%lx-%lx", &start, &end) == 2) {
         // printf("Unmapping %lx - %lx\n", start, end);
-        if (munmap((void *)start, end - start) != 0) {
+        if (munmap((void*)start, end - start) != 0) {
           perror("Warning: unmapping has failed!!");
         }
       }
@@ -271,6 +328,12 @@ void unmap_vdso_vvar() {
   fclose(maps);
 }
 
+/**
+ * @brief Print architectural changes in general-purpose registers (x1–x31).
+ *
+ * x0 is skipped (always 0), and x9 is skipped because it stores the
+ * trampoline return address for sandbox escape.
+ */
 void print_xreg_changes(void) {
   // skip x0 since it is hardwired to 0
   for (int i = 1; i < 32; i++) {
@@ -292,6 +355,14 @@ static const bool special_mask[32] = {
     [25] = true, [29] = true, [30] = true,
 };
 
+/**
+ * @brief Print floating-point register changes with architecture-specific
+ * masks.
+ *
+ * Some floating‑point registers expose only their lower 32 bits. For these,
+ * the upper 32 bits are masked off before comparison, ensuring differences are
+ * meaningful. Any register whose (possibly masked) value changed is logged.
+ */
 void print_freg_changes(void) {
   for (int i = 0; i < 32; i++) {
     uint64_t before = freg_init_data[i];

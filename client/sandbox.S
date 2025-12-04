@@ -1,4 +1,3 @@
-
 	.text
 	.global run_sandbox
 	.global temp_storage
@@ -99,16 +98,18 @@ xreg_init:
 
 ########################################################
 
+# load address of sandbox_ptr to s1
 	la      s1, sandbox_ptr
 	ld      s1, 0(s1)
 
-# Jump absolutely to sandbox start (jalr zero, 0(s0))
+# Jump absolutely to sandbox start
 	jalr    s1, 32(s1)               # offset 4 to skip the first ebreak
 
 ########################################################
 
 return_label:
 # After sandbox returns...
+# save register values to xreg_output_data and freg_output_data
 reg_dump:
 	la      s1, xreg_output_data
 	sd      x0, 0(s1)
