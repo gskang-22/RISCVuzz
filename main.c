@@ -7,15 +7,15 @@
 #include "client.h"
 #include "sandbox.h"
 
-extern uint8_t *sandbox_ptr;
-extern mapped_region_t *g_regions;
-extern memdiff_t *g_diffs;
+extern uint8_t* sandbox_ptr;
+extern mapped_region_t* g_regions;
+extern memdiff_t* g_diffs;
 extern void unmap_all_regions();
 extern size_t g_regions_len;
 
-ssize_t read_n(int fd, void *buf, size_t n);
-ssize_t write_n(int fd, const void *buf, size_t n);
-void log_append(const char *fmt, ...);
+ssize_t read_n(int fd, void* buf, size_t n);
+ssize_t write_n(int fd, const void* buf, size_t n);
+void log_append(const char* fmt, ...);
 int send_log();
 void set_up_tcp();
 
@@ -26,6 +26,13 @@ void set_up_tcp();
 #define CLIENT_NAME "beagle"
 // #define CLIENT_NAME "lichee"
 
+/*
+ * Definitions to control code logic
+ * if TESTING is defined:
+ *   hardcoded instruction sequence in instructions[] will be used instead
+ * if DEBUG_MODE is defined:
+ *   output will be printed to console (instead of only to console.log file)
+ */
 // #define TESTING
 // #define DEBUG_MODE
 
@@ -67,7 +74,7 @@ int main() {
   set_up_tcp();
 
   // send client name for identification
-  const char *name = CLIENT_NAME;
+  const char* name = CLIENT_NAME;
   uint32_t len = htonl(strlen(name));
   write_n(sock, &len, sizeof(len));   // send length
   write_n(sock, name, strlen(name));  // send name
@@ -89,13 +96,7 @@ int main() {
       break;
     }
 
-    // if (batch_size > (UINT32_MAX / sizeof(uint32_t)) ||
-    //     batch_size > SOME_REASONABLE_LIMIT) {  // e.g., 1<<20
-    //   fprintf(stderr, "batch_size too large: %u\n", batch_size);
-    //   break;
-    // }
-
-    uint32_t *instructions = malloc(batch_size * sizeof(uint32_t));
+    uint32_t* instructions = malloc(batch_size * sizeof(uint32_t));
     if (!instructions) {
       perror("malloc");
       break;
@@ -161,27 +162,27 @@ int main() {
 }
 
 // read exactly n bytes, retry until all bytes received
-ssize_t read_n(int fd, void *buf, size_t n) {
+ssize_t read_n(int fd, void* buf, size_t n) {
   size_t total = 0;
   while (total < n) {
-    ssize_t ret = read(fd, (char *)buf + total, n - total);
+    ssize_t ret = read(fd, (char*)buf + total, n - total);
     if (ret <= 0) return ret;  // error or disconnect
     total += ret;
   }
   return total;
 }
 
-ssize_t write_n(int fd, const void *buf, size_t n) {
+ssize_t write_n(int fd, const void* buf, size_t n) {
   size_t total = 0;
   while (total < n) {
-    ssize_t ret = write(fd, (char *)buf + total, n - total);
+    ssize_t ret = write(fd, (char*)buf + total, n - total);
     if (ret <= 0) return ret;
     total += ret;
   }
   return total;
 }
 
-void log_append(const char *fmt, ...) {
+void log_append(const char* fmt, ...) {
   va_list args;
 #ifdef DEBUG_MODE
   // Print immediately to stdout
@@ -245,7 +246,7 @@ void set_up_tcp() {
   inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
 
   // attempt to establish TCP connection
-  if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+  if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
     perror("connect");
     close(sock);
     exit(1);

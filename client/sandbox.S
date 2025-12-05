@@ -103,7 +103,9 @@ xreg_init:
 	ld      s1, 0(s1)
 
 # Jump absolutely to sandbox start
-	jalr    s1, 32(s1)               # offset 4 to skip the first ebreak
+# (skipping 0x00000000 and ebreak instructions in front)
+# 0x20 (start offset) == 32
+	jalr    s1, 32(s1)
 
 ########################################################
 
